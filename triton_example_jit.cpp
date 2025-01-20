@@ -138,7 +138,7 @@ template <> struct triton_type<int> {static constexpr const char* name = "i32";}
 template <> struct triton_type<int64_t> {static constexpr const char* name = "i64";};
 template <> struct triton_type<float> {static constexpr const char* name = "f32";};
 template <> struct triton_type<double> {static constexpr const char* name = "f64";};
-template <> struct triton_type<std::nullptr_t> {static constexpr const char* name = "i8";};
+template <> struct triton_type<std::nullptr_t> {static constexpr const char* name = "*i8";};
 
 
 template <typename T>
@@ -226,7 +226,7 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
 
     // add utility to build this automatically
     const int64_t tile_size = 1024;
-    const int num_warps = 4;
+    const int num_warps = 8;
     const int num_stages = 1;
     int64_t n = out.numel();
     const unsigned int num_blocks = (n + tile_size - 1) / tile_size;
