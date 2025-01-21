@@ -73,15 +73,9 @@ class TritonKernel {
   CUfunction function_;
 
   void lazy_init_handle(){
-
-    std::cout << (this -> dir_) << std::endl;
-    std::cout << (this -> kernel_name_) << std::endl;
-    std::cout << "INIT HANDLE" << std::endl;
-
     if (this -> loaded_) return;
 
     std::string metadata_path = fmt::format("{}/{}.json", this -> dir_, this -> kernel_name_);
-    std::cout <<"META PATH: " <<  metadata_path << std::endl;
     std::ifstream f(metadata_path.c_str());
     json meta_data = json::parse(f);
     this->share_ = meta_data["shared"];
@@ -90,15 +84,11 @@ class TritonKernel {
     checkCudaErrors(cuModuleLoad(&(this->module_), cubin_path.c_str()));
     checkCudaErrors(cuModuleGetFunction(&this->function_, this->module_, this->kernel_name_.c_str()));
     this->loaded_ = true;
-    std::cout << "INIT DONE" << std::endl;
   }
 
  public:
   TritonKernel(const std::string& dir, const std::string& kernel_name)
     :dir_(dir), kernel_name_(kernel_name), loaded_(false), share_(0), module_(nullptr), function_(nullptr){
-    std::cout << "Construct" << std::endl;
-    std::cout << (this -> dir_) << std::endl;
-    std::cout << (this -> kernel_name_) << std::endl;
   }
 
   // consider using a variadic template
@@ -233,7 +223,6 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
     c10::cuda::CUDAStream stream = c10::cuda::getCurrentCUDAStream();
     CUstream raw_stream = static_cast<CUstream>(stream.stream());
     f.invoke(num_blocks, 1, 1, num_warps, num_stages, a, b, out, n, tile_size, raw_stream);
-    // std::cout << out << std::endl;
     return out;
 }
 
@@ -245,15 +234,17 @@ int main() {
   torch::Tensor b = torch::randn({10, 10}, device);
   torch::Tensor tmp1 = a + b;
   torch::Tensor tmp2 = add_tensor(a, b);
+  std::cout << "ATEN:\n" << tmp1 << std::endl;
+  std::cout << "TRITON:\n" << tmp2 << std::endl;
 
-  std::cout << "EAGER" << std::endl ;
-  torch::Tensor out1 = a + b;
-  std::cout << out1 << std::endl ;
-  std::cout << std::endl;
 
-  std::cout << "TRITON" << std::endl ;
-  torch::Tensor out2 = add_tensor(a, b);
-  std::cout << out2 << std::endl;
+  for (int i = 0; i < 10; i++){
+    torch::Tensor out1 = a + b;
+  }
+
+  for (int i = 0; i < 10; i ++){
+    torch::Tensor out2 = add_tensor(a, b);
+  }
   return 0;
 
 }
