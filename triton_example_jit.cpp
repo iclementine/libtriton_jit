@@ -196,9 +196,8 @@ class TritonJITFunction {
         hash
       );
       TritonKernel kernel(kernel_dir, this->function_name_);
-      this->overloads_.insert({signature, kernel});
+      pos = this->overloads_.insert({signature, kernel}).first;
     }
-    pos = this->overloads_.find(signature);
     void* pa = a.data_ptr();
     void* pb = b.data_ptr();
     void* pout = out.data_ptr();
@@ -220,7 +219,7 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
       at::TensorOptions().dtype(out_dtype).device(a.device()));
     int64_t rank = out.ndimension();
 
-    TritonJITFunction f(
+    static TritonJITFunction f(
       "/home/clement/projects/libtorch_example/binary_add.py",
       "binary_pointwise_kernel");
 
@@ -242,10 +241,17 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
 
 int main() {
   const torch::Device device(torch::kCUDA, 0);
-  torch::Tensor a = torch::randn({4096}, device);
-  torch::Tensor b = torch::randn({4096}, device);
-  torch::Tensor out = a + b;
+  torch::Tensor a = torch::randn({10, 10}, device);
+  torch::Tensor b = torch::randn({10, 10}, device);
+  torch::Tensor tmp1 = a + b;
+  torch::Tensor tmp2 = add_tensor(a, b);
 
+  std::cout << "EAGER" << std::endl ;
+  torch::Tensor out1 = a + b;
+  std::cout << out1 << std::endl ;
+  std::cout << std::endl;
+
+  std::cout << "TRITON" << std::endl ;
   torch::Tensor out2 = add_tensor(a, b);
   std::cout << out2 << std::endl;
   return 0;
