@@ -1,8 +1,6 @@
 #include "torch/torch.h"
 #include <string>
 
-
-
 std::string strip(const std::string &str);
 std::string executePythonScript(std::string_view command);
 
@@ -31,26 +29,39 @@ template <typename T> inline const char *spec(T v) {
   return v % 16 == 0 ? ":16" : v == 1 ? ":1" : "";
 }
 
+template <typename T, typename = void> struct has_data_ptr : std::false_type {};
 
-// template <typename T> struct triton_type {};
+template <typename T>
+struct has_data_ptr<
+    T, std::enable_if_t<std::conjunction_v<
+           std::is_same<
+               decltype(std::declval<std::remove_reference_t<T>>().data_ptr()),
+               void *>,
+           std::is_same<decltype(std::declval<std::remove_reference_t<T>>()
+                                     .scalar_type()),
+                        c10::ScalarType>>>> : std::true_type {};
 
-// template <> struct triton_type<bool> {
-//   static constexpr const char *name = "i1";
-// };
-// template <> struct triton_type<int> {
-//   static constexpr const char *name = "i32";
-// };
-// template <> struct triton_type<int64_t> {
-//   static constexpr const char *name = "i64";
-// };
-// template <> struct triton_type<float> {
-//   static constexpr const char *name = "f32";
-// };
-// template <> struct triton_type<double> {
-//   static constexpr const char *name = "f64";
-// };
-// template <> struct triton_type<std::nullptr_t> {
-//   static constexpr const char *name = "*i8";
-// };
+template <typename T> struct triton_type_helper {};
 
+template <> struct triton_type_helper<bool> {
+  static constexpr const char *name = "i1";
+};
+template <> struct triton_type_helper<int> {
+  static constexpr const char *name = "i32";
+};
+template <> struct triton_type_helper<int64_t> {
+  static constexpr const char *name = "i64";
+};
 
+template <> struct triton_type_helper<float> {
+  static constexpr const char *name = "f32";
+};
+template <> struct triton_type_helper<double> {
+  static constexpr const char *name = "f64";
+};
+template <> struct triton_type_helper<std::nullptr_t> {
+  static constexpr const char *name = "*i8";
+};
+
+template <typename T> struct triton_type
+  : triton_type_helper<std::remove_cv_t<std::remove_reference_t<T>>> {};

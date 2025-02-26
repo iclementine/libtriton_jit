@@ -21,12 +21,12 @@ private:
   std::string dir_;
   std::string kernel_name_;
 
-  bool loaded_ = false;
-  unsigned int share_;
-  CUmodule module_;
-  CUfunction function_;
+  mutable bool loaded_ = false;
+  mutable unsigned int share_;
+  mutable CUmodule module_;
+  mutable CUfunction function_;
 
-  void lazy_init_handle();
+  void lazy_init_handle() const;
 
 public:
   TritonKernel(std::string_view dir, std::string_view kernel_name)
@@ -35,5 +35,5 @@ public:
 
   // consider using a variadic template
   void launch(unsigned int grid_x, unsigned int grid_y, unsigned int grid_z,
-              int num_warps, CUstream stream, void **args);
+              int num_warps, CUstream stream, void **args) const;
 };

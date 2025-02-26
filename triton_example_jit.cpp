@@ -71,7 +71,7 @@ private:
   CUmodule module_;
   CUfunction function_;
 
-  void lazy_init_handle() {
+  void lazy_init_handle(){
     if (this->loaded_)
       return;
 
@@ -125,24 +125,24 @@ inline const char *to_triton_typename(c10::ScalarType t) {
   }
 }
 
-template <typename T> struct triton_type {};
+template <typename T> struct triton_type_helper {};
 
-template <> struct triton_type<bool> {
+template <> struct triton_type_helper<bool> {
   static constexpr const char *name = "i1";
 };
-template <> struct triton_type<int> {
+template <> struct triton_type_helper<int> {
   static constexpr const char *name = "i32";
 };
-template <> struct triton_type<int64_t> {
+template <> struct triton_type_helper<int64_t> {
   static constexpr const char *name = "i64";
 };
-template <> struct triton_type<float> {
+template <> struct triton_type_helper<float> {
   static constexpr const char *name = "f32";
 };
-template <> struct triton_type<double> {
+template <> struct triton_type_helper<double> {
   static constexpr const char *name = "f64";
 };
-template <> struct triton_type<std::nullptr_t> {
+template <> struct triton_type_helper<std::nullptr_t> {
   static constexpr const char *name = "*i8";
 };
 
@@ -166,10 +166,14 @@ public:
               unsigned int num_warps, unsigned int num_stages,
               const at::Tensor &a, const at::Tensor &b, const at::Tensor &out,
               int64_t numel, int64_t tile_size, CUstream stream) const {
+
+    // data pointer
     void *pa = a.data_ptr();
     void *pb = b.data_ptr();
     void *pout = out.data_ptr();
 
+    // signature 构造
+    // small vec of string
     std::string signature = fmt::format(
         "\"*{}{}, *{}{}, *{}{}, {}, {}\"", to_triton_typename(a.scalar_type()),
         spec(reinterpret_cast<std::uintptr_t>(pa)),
@@ -177,13 +181,13 @@ public:
         spec(reinterpret_cast<std::uintptr_t>(pb)),
         to_triton_typename(out.scalar_type()),
         spec(reinterpret_cast<std::uintptr_t>(pout)),
-        triton_type<decltype(numel)>::name, tile_size);
+        triton_type_helper<decltype(numel)>::name, tile_size);
 
     auto pos = this->overloads_.find(signature);
     if (pos == this->overloads_.end()) {
       std::string cmd = fmt::format(
           "/home/clement/.virtualenvs/dev/bin/python "
-          "/home/clement/projects/libtorch_example/standalone_compile.py "
+          "/home/clement/projects/libtorch_example/tools/standalone_compile.py "
           "--kernel-name {} "
           "--signature {} "
           "--num-warps {} --num-stages {} "
@@ -198,6 +202,7 @@ public:
       pos = this->overloads_.insert({signature, kernel}).first;
     }
 
+    // + small vector
     void *args[] = {&pa, &pb, &pout, &numel};
     pos->second.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
   }

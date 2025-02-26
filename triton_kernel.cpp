@@ -6,10 +6,11 @@
 
 using json = nlohmann::json;
 
-void TritonKernel::lazy_init_handle() {
+void TritonKernel::lazy_init_handle() const {
   if (this->loaded_)
     return;
 
+  // Maybe geting shared with driver API is better
   std::string metadata_path =
       fmt::format("{}/{}.json", this->dir_, this->kernel_name_);
   std::ifstream f(metadata_path.c_str());
@@ -29,7 +30,7 @@ void TritonKernel::lazy_init_handle() {
 // consider using a variadic template
 void TritonKernel::launch(unsigned int grid_x, unsigned int grid_y,
                           unsigned int grid_z, int num_warps, CUstream stream,
-                          void **args) {
+                          void **args) const {
   this->lazy_init_handle();
   checkCudaErrors(cuLaunchKernel(this->function_, grid_x, grid_y, grid_z,
                                  32 * num_warps, 1, 1, this->share_, stream,

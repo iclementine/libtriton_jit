@@ -25,6 +25,8 @@ FetchContent_Declare(
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build fmt as shared library" FORCE)
 FetchContent_MakeAvailable(fmt)
 
+
+include_directories("${PROJECT_SOURCE_DIR}")
 # targets
 add_executable(tensor_add tensor_add.cu)
 target_link_libraries(tensor_add "${TORCH_LIBRARIES}" CUDA::cuda_driver)
@@ -34,12 +36,25 @@ target_link_libraries(triton_example_jit
   PRIVATE "${TORCH_LIBRARIES}" CUDA::cuda_driver nlohmann_json::nlohmann_json fmt::fmt)
 
 add_library(triton_kernel SHARED triton_kernel.cpp)
-target_include_directories(triton_kernel PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(triton_kernel
   PUBLIC CUDA::cuda_driver
   PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
 
+
 add_library(jit_utils SHARED jit_utils.cpp)
-target_include_directories(jit_utils PUBLIC "${PROJECT_SOURCE_DIR}")
 target_link_libraries(jit_utils
   PUBLIC "${TORCH_LIBRARIES}")
+
+add_library(triton_jit_function SHARED triton_jit_function.cpp)
+target_link_libraries(triton_jit_function
+  PUBLIC CUDA::cuda_driver
+  PRIVATE nlohmann_json::nlohmann_json fmt::fmt jit_utils)
+
+add_executable(test_jit_function test_triton_jit.cpp)
+target_link_libraries(test_jit_function "${TORCH_LIBRARIES}" nlohmann_json::nlohmann_json fmt::fmt triton_jit_function triton_kernel)
+
+add_library(example SHARED example.cpp)
+add_executable(call_func call_func.cpp)
+add_dependencies(call_func example)
+
+
