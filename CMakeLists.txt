@@ -47,14 +47,17 @@ target_link_libraries(jit_utils
 
 add_library(triton_jit_function SHARED triton_jit_function.cpp)
 target_link_libraries(triton_jit_function
-  PUBLIC CUDA::cuda_driver
-  PRIVATE nlohmann_json::nlohmann_json fmt::fmt jit_utils)
+  PUBLIC CUDA::cuda_driver jit_utils triton_kernel
+  PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
 
 add_executable(test_jit_function test_triton_jit.cpp)
-target_link_libraries(test_jit_function "${TORCH_LIBRARIES}" nlohmann_json::nlohmann_json fmt::fmt triton_jit_function triton_kernel)
+target_link_libraries(test_jit_function
+  PUBLIC triton_jit_function
+  PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
 
 add_library(example SHARED example.cpp)
 add_executable(call_func call_func.cpp)
+target_link_libraries(call_func PRIVATE dl)
 add_dependencies(call_func example)
 
 

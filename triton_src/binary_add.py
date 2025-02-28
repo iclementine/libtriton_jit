@@ -23,3 +23,4 @@ def binary_pointwise_kernel(X, Y, O, n, BLOCK_N: tl.constexpr):
     y = tl.load(Y + offsets, mask=mask)
     o = x + y
     tl.store(O + offsets, o, mask=mask)
+

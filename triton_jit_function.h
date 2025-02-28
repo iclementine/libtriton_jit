@@ -51,20 +51,30 @@ public:
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
-      } else {
-        if (this->static_sig_.arg_type[idx] == 2) {
+      } else if constexpr(std::is_same_v<decltype(item), std::nullopt_t>) {
+        signature.push_back("*i8");
+      } else if (this->static_sig_.arg_type[idx] == 2) { // constexpr
           signature.push_back(fmt::format("{}", item));
-        } else {
-          const void* p_item = &item;
-          kernel_args.push_back(const_cast<void*>(p_item));
+      } else if (this->static_sig_.arg_type[idx] == 1){ // specialzied
+          // TODO: filter out int 1 & nullptr or nullopt
           const char *dtype = triton_type<decltype(item)>::name;
-          const char *specialization = "";
-          if (this->static_sig_.arg_type[idx] == 1) {
-            specialization = spec(item);
+          const char * specialization = spec(item);
+          if constexpr(std::is_integral_v<decltype(item)>) {
+            if (specialization != ":1") {
+              const void* p_item = &item;
+              kernel_args.push_back(const_cast<void*>(p_item));
+            }
+          } else {
+            const void* p_item = &item;
+            kernel_args.push_back(const_cast<void*>(p_item));
           }
           std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
           signature.push_back(sig_for_idx);
-        }
+      } else {
+        const void* p_item = &item;
+        kernel_args.push_back(const_cast<void*>(p_item));
+        const char *dtype = triton_type<decltype(item)>::name;
+        signature.push_back(dtype);
       }
       idx++;
     };

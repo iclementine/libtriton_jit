@@ -1,6 +1,5 @@
 #include "c10/cuda/CUDAStream.h"
 #include "torch/torch.h"
-#include "fmt/core.h"
 #include <iostream>
 #include "triton_jit_function.h"
 
