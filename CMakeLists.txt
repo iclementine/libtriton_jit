@@ -41,14 +41,14 @@ target_link_libraries(jit_utils
 
 add_library(triton_jit_function SHARED triton_jit_function.cpp)
 target_link_libraries(triton_jit_function
-  PUBLIC CUDA::cuda_driver jit_utils triton_kernel
-  PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
+  PUBLIC CUDA::cuda_driver jit_utils triton_kernel nlohmann_json::nlohmann_json fmt::fmt)
 
-add_executable(test_jit_function test_triton_jit.cpp)
-target_link_libraries(test_jit_function
-  PUBLIC triton_jit_function
-  PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
+add_executable(test_triton_add test_triton_add.cpp)
+target_link_libraries(test_triton_add
+  PUBLIC triton_jit_function)
 
-
+add_executable(test_triton_sum test_triton_sum.cpp)
+target_link_libraries(test_triton_sum
+  PUBLIC triton_jit_function)
 
 
