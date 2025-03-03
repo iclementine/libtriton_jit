@@ -27,14 +27,8 @@ FetchContent_MakeAvailable(fmt)
 
 
 include_directories("${PROJECT_SOURCE_DIR}")
+
 # targets
-add_executable(tensor_add tensor_add.cu)
-target_link_libraries(tensor_add "${TORCH_LIBRARIES}" CUDA::cuda_driver)
-
-add_executable(triton_example_jit triton_example_jit.cpp)
-target_link_libraries(triton_example_jit
-  PRIVATE "${TORCH_LIBRARIES}" CUDA::cuda_driver nlohmann_json::nlohmann_json fmt::fmt)
-
 add_library(triton_kernel SHARED triton_kernel.cpp)
 target_link_libraries(triton_kernel
   PUBLIC CUDA::cuda_driver
@@ -55,9 +49,6 @@ target_link_libraries(test_jit_function
   PUBLIC triton_jit_function
   PRIVATE nlohmann_json::nlohmann_json fmt::fmt)
 
-add_library(example SHARED example.cpp)
-add_executable(call_func call_func.cpp)
-target_link_libraries(call_func PRIVATE dl)
-add_dependencies(call_func example)
+
 
 
