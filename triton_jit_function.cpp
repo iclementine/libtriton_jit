@@ -1,7 +1,8 @@
 #include "triton_jit_function.h"
 #include "fmt/core.h"
 
-std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
+std::unordered_map<std::string, TritonJITFunction>
+    TritonJITFunction::functions_;
 
 const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
                                                   int num_warps,
@@ -29,11 +30,12 @@ const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
   return pos->second;
 }
 
-TritonJITFunction & TritonJITFunction::getInstance(std::string_view path, std::string_view name){
+TritonJITFunction &TritonJITFunction::getInstance(std::string_view path,
+                                                  std::string_view name) {
   const std::string function_id = fmt::format("{}:{}", path, name);
   auto pos = TritonJITFunction::functions_.find(function_id);
 
-  if (pos == TritonJITFunction::functions_.end()){
+  if (pos == TritonJITFunction::functions_.end()) {
     TritonJITFunction f(path, name);
     pos = TritonJITFunction::functions_.emplace(function_id, f).first;
   }

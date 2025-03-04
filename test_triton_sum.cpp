@@ -1,55 +1,62 @@
 #include "c10/cuda/CUDAStream.h"
 #include "torch/torch.h"
-#include <iostream>
 #include "triton_jit_function.h"
+#include <iostream>
 
-// #include "libtorch/include/c10/util/DimVector.h"
-#include "ATen/native/ReduceOpsUtils.h"
+#include "c10/util/DimVector.h"
 #include "ATen/WrapDimUtils.h"
+#include "ATen/native/ReduceOpsUtils.h"
 
-std::tuple<at::Tensor, int64_t, int64_t> permute_reduction_axes_right(const at::Tensor& tensor, at::OptionalIntArrayRef reduction_axes_opt) {
-    int64_t dim = tensor.dim();
-    c10::DimVector reduction_axes;
+std::tuple<at::Tensor, int64_t, int64_t>
+permute_reduction_axes_right(const at::Tensor &tensor,
+                             at::OptionalIntArrayRef reduction_axes_opt) {
+  int64_t dim = tensor.dim();
+  c10::DimVector reduction_axes;
 
-    if (reduction_axes_opt.has_value()) {
-        reduction_axes = reduction_axes_opt.value().vec();
+  if (reduction_axes_opt.has_value()) {
+    reduction_axes = reduction_axes_opt.value().vec();
+  }
+
+  std::unordered_set<int64_t> reduction_set(reduction_axes.begin(),
+                                            reduction_axes.end());
+
+  c10::DimVector left_axes, right_axes;
+  int64_t non_reduction_size = 1, reduction_size = 1;
+
+  for (int64_t i = 0; i < dim; ++i) {
+    if (reduction_set.count(i)) {
+      right_axes.push_back(i);
+      reduction_size *= tensor.size(i);
+    } else {
+      left_axes.push_back(i);
+      non_reduction_size *= tensor.size(i);
     }
+  }
 
-    std::unordered_set<int64_t> reduction_set(reduction_axes.begin(), reduction_axes.end());
+  // Concatenate left and right axes to form the new permutation order
+  c10::DimVector permute_order = left_axes;
+  permute_order.insert(permute_order.end(), right_axes.begin(),
+                       right_axes.end());
 
-    c10::DimVector left_axes, right_axes;
-    int64_t non_reduction_size = 1, reduction_size = 1;
-
-    for (int64_t i = 0; i < dim; ++i) {
-        if (reduction_set.count(i)) {
-            right_axes.push_back(i);
-            reduction_size *= tensor.size(i);
-        } else {
-            left_axes.push_back(i);
-            non_reduction_size *= tensor.size(i);
-        }
-    }
-
-    // Concatenate left and right axes to form the new permutation order
-    c10::DimVector permute_order = left_axes;
-    permute_order.insert(permute_order.end(), right_axes.begin(), right_axes.end());
-
-    return {tensor.permute(permute_order), non_reduction_size, reduction_size};
+  return {tensor.permute(permute_order), non_reduction_size, reduction_size};
 }
 
-
-
-
 // signature
-// sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor
-at::Tensor sum_dim(const at::Tensor & self, at::OptionalIntArrayRef dim, bool keepdim=false, ::std::optional<at::ScalarType> dtype=::std::nullopt) {
+// sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType?
+// dtype=None) -> Tensor
+at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
+                   bool keepdim = false,
+                   ::std::optional<at::ScalarType> dtype = ::std::nullopt) {
   at::DimVector dims_ = at::native::make_dim_vector(dim, self.dim());
   at::maybe_wrap_dims(dims_, self.dim());
-  at::DimVector shape = at::meta::get_reduction_shape(self, dims_, keepdim, false);
-  c10::ScalarType out_dtype = at::native::get_dtype_from_self(self, dtype, true);
+  at::DimVector shape =
+      at::meta::get_reduction_shape(self, dims_, keepdim, false);
+  c10::ScalarType out_dtype =
+      at::native::get_dtype_from_self(self, dtype, true);
   at::Tensor out = at::empty(shape, self.options());
 
-  auto [permuted_self, non_reduction_size, reduction_size] = permute_reduction_axes_right(self, dims_);
+  auto [permuted_self, non_reduction_size, reduction_size] =
+      permute_reduction_axes_right(self, dims_);
   permuted_self = permuted_self.contiguous();
 
   /* signature to remind yourself
@@ -63,7 +70,7 @@ at::Tensor sum_dim(const at::Tensor & self, at::OptionalIntArrayRef dim, bool ke
     STAGE: tl.constexpr,
   ):
   */
-  const TritonJITFunction& f = TritonJITFunction::getInstance(
+  const TritonJITFunction &f = TritonJITFunction::getInstance(
       "/home/clement/projects/libtorch_example/triton_src/sum.py",
       "sum_kernel");
 
@@ -76,25 +83,26 @@ at::Tensor sum_dim(const at::Tensor & self, at::OptionalIntArrayRef dim, bool ke
 
   c10::cuda::CUDAStream stream = c10::cuda::getCurrentCUDAStream();
   CUstream raw_stream = static_cast<CUstream>(stream.stream());
-  f(stream, num_blocks, 1, 1, num_warps, num_stages, permuted_self, out, non_reduction_size, reduction_size, tile_m, tile_n, num_stages);
+  f(stream, num_blocks, 1, 1, num_warps, num_stages, permuted_self, out,
+    non_reduction_size, reduction_size, tile_m, tile_n, num_stages);
   return out;
 }
 
 int main() {
   const torch::Device device(torch::kCUDA, 0);
-  torch::Tensor a = torch::randn({16, 4096, 4096}, device);
+  torch::Tensor a = torch::randn({4096, 4096}, device);
 
-  torch::Tensor tmp1 = at::sum(a, {1, 2});
-  torch::Tensor tmp2 = sum_dim(a, {1, 2});
+  torch::Tensor tmp1 = at::sum(a, {1});
+  torch::Tensor tmp2 = sum_dim(a, {1});
   std::cout << "ATEN:\n" << tmp1 << std::endl;
   std::cout << "TRITON:\n" << tmp2 << std::endl;
 
-  // for (int i = 0; i < 10; i++) {
-  //   torch::Tensor out1 = a + b;
-  // }
+  for (int i = 0; i < 10; i++) {
+    torch::Tensor out1 = at::sum(a, {1});
+  }
 
-  // for (int i = 0; i < 10; i++) {
-  //   torch::Tensor out2 = add_tensor(a, b);
-  // }
+  for (int i = 0; i < 10; i++) {
+    torch::Tensor out2 = sum_dim(a, {1});
+  }
   return 0;
 }

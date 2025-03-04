@@ -1,7 +1,7 @@
 #include "c10/cuda/CUDAStream.h"
 #include "torch/torch.h"
-#include <iostream>
 #include "triton_jit_function.h"
+#include <iostream>
 
 at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   auto res = torch::broadcast_tensors({a_, b_});
@@ -13,7 +13,7 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
       a.sizes(), at::TensorOptions().dtype(out_dtype).device(a.device()));
   int64_t rank = out.ndimension();
 
-  const TritonJITFunction& f = TritonJITFunction::getInstance(
+  const TritonJITFunction &f = TritonJITFunction::getInstance(
       "/home/clement/projects/libtorch_example/triton_src/binary_add.py",
       "binary_pointwise_kernel");
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "cuda.h"
 #include <string>
 

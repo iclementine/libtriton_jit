@@ -1,3 +1,5 @@
+#pragma once
+
 #include "cuda.h"
 #include "fmt/core.h"
 #include "jit_utils.h"
@@ -13,7 +15,8 @@ struct StaticSignature {
 
 class TritonJITFunction {
 public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+  static TritonJITFunction &getInstance(std::string_view path,
+                                        std::string_view name);
 
   template <typename... Args>
   void operator()(CUstream stream, unsigned int grid_x, unsigned int grid_y,
@@ -51,28 +54,28 @@ public:
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
-      } else if constexpr(std::is_same_v<decltype(item), std::nullopt_t>) {
+      } else if constexpr (std::is_same_v<decltype(item), std::nullopt_t>) {
         signature.push_back("*i8");
       } else if (this->static_sig_.arg_type[idx] == 2) { // constexpr
-          signature.push_back(fmt::format("{}", item));
-      } else if (this->static_sig_.arg_type[idx] == 1){ // specialzied
-          // TODO: filter out int 1 & nullptr or nullopt
-          const char *dtype = triton_type<decltype(item)>::name;
-          const char * specialization = spec(item);
-          if constexpr(std::is_integral_v<decltype(item)>) {
-            if (specialization != ":1") {
-              const void* p_item = &item;
-              kernel_args.push_back(const_cast<void*>(p_item));
-            }
-          } else {
-            const void* p_item = &item;
-            kernel_args.push_back(const_cast<void*>(p_item));
+        signature.push_back(fmt::format("{}", item));
+      } else if (this->static_sig_.arg_type[idx] == 1) { // specialzied
+        // TODO: filter out int 1 & nullptr or nullopt
+        const char *dtype = triton_type<decltype(item)>::name;
+        const char *specialization = spec(item);
+        if constexpr (std::is_integral_v<decltype(item)>) {
+          if (specialization != ":1") {
+            const void *p_item = &item;
+            kernel_args.push_back(const_cast<void *>(p_item));
           }
-          std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
-          signature.push_back(sig_for_idx);
+        } else {
+          const void *p_item = &item;
+          kernel_args.push_back(const_cast<void *>(p_item));
+        }
+        std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
+        signature.push_back(sig_for_idx);
       } else {
-        const void* p_item = &item;
-        kernel_args.push_back(const_cast<void*>(p_item));
+        const void *p_item = &item;
+        kernel_args.push_back(const_cast<void *>(p_item));
         const char *dtype = triton_type<decltype(item)>::name;
         signature.push_back(dtype);
       }
@@ -92,7 +95,8 @@ public:
 
     const TritonKernel &kernel =
         this->get_kernel(full_signature, num_warps, num_stages);
-    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
+    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream,
+                  kernel_args.data());
     return;
   }
 
@@ -112,7 +116,8 @@ private:
     std::string cmd =
         fmt::format("/home/clement/.virtualenvs/dev/bin/python "
                     "/home/clement/projects/libtorch_example/tools/gen_spec.py "
-                    "-n {} {}", name, path);
+                    "-n {} {}",
+                    name, path);
     std::cout << "Command: " << cmd << std::endl;
     using json = nlohmann::json;
     std::string signature = executePythonScript(cmd);
