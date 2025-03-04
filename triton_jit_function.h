@@ -4,6 +4,7 @@
 #include "fmt/core.h"
 #include "jit_utils.h"
 #include "triton_kernel.h"
+#include <filesystem>
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <type_traits>
@@ -59,7 +60,6 @@ public:
       } else if (this->static_sig_.arg_type[idx] == 2) { // constexpr
         signature.push_back(fmt::format("{}", item));
       } else if (this->static_sig_.arg_type[idx] == 1) { // specialzied
-        // TODO: filter out int 1 & nullptr or nullopt
         const char *dtype = triton_type<decltype(item)>::name;
         const char *specialization = spec(item);
         if constexpr (std::is_integral_v<decltype(item)>) {
@@ -113,14 +113,11 @@ private:
       : file_path_(path), function_name_(name) {
     // Can we load the function with signature now?
     // We need to know whether an argument is a constexpr
-    std::string cmd =
-        fmt::format("/home/clement/.virtualenvs/dev/bin/python "
-                    "/home/clement/projects/libtorch_example/tools/gen_spec.py "
-                    "-n {} {}",
-                    name, path);
+    std::string cmd = fmt::format("{} {} -n {} {}", get_python_executable(),
+                                  get_gen_static_sig_script(), name, path);
     std::cout << "Command: " << cmd << std::endl;
     using json = nlohmann::json;
-    std::string signature = executePythonScript(cmd);
+    std::string signature = execute_command(cmd);
     std::cout << "Output: " << signature << std::endl;
 
     json j = json::parse(std::stringstream(signature));

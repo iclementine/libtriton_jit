@@ -5,8 +5,11 @@
 
 at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   auto res = torch::broadcast_tensors({a_, b_});
+  res[0] = res[0].contiguous();
+  res[1] = res[1].contiguous();
   const at::Tensor &a = res[0];
   const at::Tensor &b = res[1];
+
   at::ScalarType out_dtype =
       at::promote_types(a.scalar_type(), b.scalar_type());
   at::Tensor out = at::empty(
@@ -14,7 +17,7 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   int64_t rank = out.ndimension();
 
   const TritonJITFunction &f = TritonJITFunction::getInstance(
-      "/home/clement/projects/libtorch_example/triton_src/binary_add.py",
+      std::string(get_triton_src_path() / "binary_add.py"),
       "binary_pointwise_kernel");
 
   // add utility to build this automatically

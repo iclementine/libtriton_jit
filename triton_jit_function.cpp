@@ -9,21 +9,20 @@ const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
                                                   int num_stages) const {
   auto pos = this->overloads_.find(signature);
   if (pos == this->overloads_.end()) {
-    std::string cmd = fmt::format(
-        "/home/clement/.virtualenvs/dev/bin/python "
-        "/home/clement/projects/libtorch_example/tools/standalone_compile.py "
-        "--kernel-name {} "
-        "--signature {} "
-        "--num-warps {} --num-stages {} "
-        "{}",
-        this->function_name_, signature, num_warps, num_stages,
-        this->file_path_);
+    std::string cmd =
+        fmt::format("{} {} "
+                    "--kernel-name {} "
+                    "--signature {} "
+                    "--num-warps {} --num-stages {} "
+                    "{}",
+                    get_python_executable(), get_standalone_compile_script(),
+                    this->function_name_, signature, num_warps, num_stages,
+                    this->file_path_);
     std::cout << "Command: " << cmd << std::endl;
-    std::string hash = executePythonScript(cmd);
+    std::string hash = execute_command(cmd);
     std::cout << "Output: " << hash << std::endl;
 
-    c10::string kernel_dir =
-        fmt::format("/home/clement/.flaggems/triton_cache/{}", hash);
+    std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);
     pos = this->overloads_.emplace(signature, kernel).first;
   }

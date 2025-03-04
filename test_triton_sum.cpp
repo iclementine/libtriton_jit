@@ -6,6 +6,7 @@
 #include "c10/util/DimVector.h"
 #include "ATen/WrapDimUtils.h"
 #include "ATen/native/ReduceOpsUtils.h"
+#include <filesystem>
 
 std::tuple<at::Tensor, int64_t, int64_t>
 permute_reduction_axes_right(const at::Tensor &tensor,
@@ -71,7 +72,7 @@ at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
   ):
   */
   const TritonJITFunction &f = TritonJITFunction::getInstance(
-      "/home/clement/projects/libtorch_example/triton_src/sum.py",
+      std::string(get_triton_src_path() / "sum.py"),
       "sum_kernel");
 
   // add utility to build this automatically

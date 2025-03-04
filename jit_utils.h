@@ -1,10 +1,11 @@
 #pragma once
 
 #include "torch/torch.h"
+#include <cstdlib>
+#include <filesystem>
 #include <string>
 
-std::string strip(const std::string &str);
-std::string executePythonScript(std::string_view command);
+std::string execute_command(std::string_view command);
 
 inline const char *to_triton_typename(c10::ScalarType t) {
   switch (t) {
@@ -65,5 +66,13 @@ template <> struct triton_type_helper<std::nullptr_t> {
   static constexpr const char *name = "*i8";
 };
 
-template <typename T> struct triton_type
-  : triton_type_helper<std::remove_cv_t<std::remove_reference_t<T>>> {};
+template <typename T>
+struct triton_type
+    : triton_type_helper<std::remove_cv_t<std::remove_reference_t<T>>> {};
+
+// path of python executable
+const char *get_python_executable();
+const char *get_gen_static_sig_script();
+const char *get_standalone_compile_script();
+std::filesystem::path get_cache_path();
+std::filesystem::path get_triton_src_path();
