@@ -9,12 +9,12 @@ learn the mapping between
 to get some understanding of ptx and SASS.
 """
 
-import torch
 import triton
 from triton import language as tl
 
+
 @triton.jit
-def binary_pointwise_kernel(X, Y, O, n, sx, sy, so, BLOCK_N: tl.constexpr):
+def binary_pointwise_kernel(X, Y, Out, n, sx, sy, so, BLOCK_N: tl.constexpr):
     pid = tl.program_id(0)
     offsets = pid * BLOCK_N + tl.arange(0, BLOCK_N)
     mask = offsets < n
@@ -22,4 +22,4 @@ def binary_pointwise_kernel(X, Y, O, n, sx, sy, so, BLOCK_N: tl.constexpr):
     x = tl.load(X + offsets * sx, mask=mask)
     y = tl.load(Y + offsets * sy, mask=mask)
     o = x + y
-    tl.store(O + offsets * so, o, mask=mask)
+    tl.store(Out + offsets * so, o, mask=mask)

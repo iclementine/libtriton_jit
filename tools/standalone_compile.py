@@ -1,15 +1,14 @@
 import importlib.util
-from typing import Union, List, Tuple
-from argparse import ArgumentParser
-import pathlib
-from pathlib import Path
 import os
+from argparse import ArgumentParser
+from pathlib import Path
+from typing import List, Tuple, Union
 
+import triton
 
 # use a separate cache for flaggems triton kernels
 os.environ["TRITON_CACHE_DIR"] = str(Path.home() / ".flaggems" / "triton_cache")
 # pylint: disable-next=wrong-import-position
-import triton
 
 DESC = """
 Script to compile Triton Jit functions into Compiled Kernel and cache it into a cache dir.
@@ -29,9 +28,10 @@ Said kernel will be specialized such that argument 0, 1 are assumed to be multip
 and argument 2 is assumed to be a compile-time constant of value 1024, i.e. it won't be part of the generated prototype.
 """
 
+
 # backends/nvidia/driver.py
 def ty_to_cpp(ty):
-    if ty[0] == '*':
+    if ty[0] == "*":
         return "CUdeviceptr"
     return {
         "i1": "int32_t",
@@ -51,17 +51,18 @@ def ty_to_cpp(ty):
         "fp64": "double",
     }[ty]
 
+
 # compiler/code_generator.py
 def kernel_suffix(signature, specialization):
     # suffix format:
     # <argid><'c' if equal to 1><'d' if divisible by 16><'e' if divisible by 8>
-    suffix = ''
+    suffix = ""
     for i, _ in enumerate(signature):
         suffix += str(i)
         if i in specialization.equal_to_1:
-            suffix += 'c'
+            suffix += "c"
         if i in specialization.divisible_by_16:
-            suffix += 'd'
+            suffix += "d"
     return suffix
 
 
@@ -146,7 +147,6 @@ def compile_a_kernel(
     #         arg_names += [fn.arg_names[i]]
     #         arg_types += [signature_without_spec[i]]
 
-
     # params = {
     #     "cubin_path": (Path(os.environ["TRITON_CACHE_DIR"]).expanduser() / ccinfo.hash / ccinfo.name).with_suffix(".cubin").absolute() ,
     #     "kernel_name": fn.__name__,
@@ -161,7 +161,6 @@ def compile_a_kernel(
     #     template_path = Path(__file__).parent / f"triton_kernel_template.{ext}"
     #     with Path(f"{ccinfo.name}.{ext}").open("wt", encoding="utf-8") as fp:
     #         fp.write(Path(template_path).read_text(encoding="utf-8").format(**params))
-
 
     return ccinfo.name, ccinfo.hash
 

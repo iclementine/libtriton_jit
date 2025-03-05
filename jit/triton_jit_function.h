@@ -1,13 +1,13 @@
 #pragma once
 
-#include "cuda.h"
-#include "fmt/core.h"
-#include "jit_utils.h"
-#include "triton_kernel.h"
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <type_traits>
+#include "cuda.h"
+#include "fmt/core.h"
+#include "jit_utils.h"
+#include "triton_kernel.h"
 
 struct StaticSignature {
   int num_args;
@@ -15,14 +15,17 @@ struct StaticSignature {
 };
 
 class TritonJITFunction {
-public:
-  static TritonJITFunction &getInstance(std::string_view path,
-                                        std::string_view name);
+ public:
+  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
 
   template <typename... Args>
-  void operator()(CUstream stream, unsigned int grid_x, unsigned int grid_y,
-                  unsigned int grid_z, unsigned int num_warps,
-                  unsigned int num_stages, Args... args) const {
+  void operator()(CUstream stream,
+                  unsigned int grid_x,
+                  unsigned int grid_y,
+                  unsigned int grid_z,
+                  unsigned int num_warps,
+                  unsigned int num_stages,
+                  Args... args) const {
     // requires:
     // 1. signature from kernel
     // build signature (requires args processing) -> build a source for the
@@ -50,16 +53,15 @@ public:
         const char *dtype = to_triton_typename(item.scalar_type());
         const char *specialization = "";
         if (this->static_sig_.arg_type[idx] == 1) {
-          specialization =
-              spec(reinterpret_cast<std::uintptr_t>(data_pointers[idx]));
+          specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers[idx]));
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
       } else if constexpr (std::is_same_v<decltype(item), std::nullopt_t>) {
         signature.push_back("*i8");
-      } else if (this->static_sig_.arg_type[idx] == 2) { // constexpr
+      } else if (this->static_sig_.arg_type[idx] == 2) {  // constexpr
         signature.push_back(fmt::format("{}", item));
-      } else if (this->static_sig_.arg_type[idx] == 1) { // specialzied
+      } else if (this->static_sig_.arg_type[idx] == 1) {  // specialzied
         const char *dtype = triton_type<decltype(item)>::name;
         const char *specialization = spec(item);
         if constexpr (std::is_integral_v<decltype(item)>) {
@@ -93,14 +95,12 @@ public:
       }
     }
 
-    const TritonKernel &kernel =
-        this->get_kernel(full_signature, num_warps, num_stages);
-    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream,
-                  kernel_args.data());
+    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages);
+    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
     return;
   }
 
-private:
+ private:
   std::string file_path_;
   std::string function_name_;
   StaticSignature static_sig_;
@@ -108,13 +108,12 @@ private:
 
   static std::unordered_map<std::string, TritonJITFunction> functions_;
 
-private:
-  TritonJITFunction(std::string_view path, std::string_view name)
-      : file_path_(path), function_name_(name) {
+ private:
+  TritonJITFunction(std::string_view path, std::string_view name) : file_path_(path), function_name_(name) {
     // Can we load the function with signature now?
     // We need to know whether an argument is a constexpr
-    std::string cmd = fmt::format("{} {} -n {} {}", get_python_executable(),
-                                  get_gen_static_sig_script(), name, path);
+    std::string cmd =
+        fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
     std::cout << "Command: " << cmd << std::endl;
     using json = nlohmann::json;
     std::string signature = execute_command(cmd);
@@ -123,10 +122,9 @@ private:
     json j = json::parse(std::stringstream(signature));
     std::vector<int> arg_types = j.get<std::vector<int>>();
     int num_args = arg_types.size();
-    this->static_sig_ = StaticSignature{num_args, arg_types};
+    this->static_sig_ = StaticSignature {num_args, arg_types};
     std::cout << j.dump() << std::endl;
   }
 
-  const TritonKernel &get_kernel(const std::string &signature, int num_warps,
-                                 int num_stages) const;
+  const TritonKernel &get_kernel(const std::string &signature, int num_warps, int num_stages) const;
 };

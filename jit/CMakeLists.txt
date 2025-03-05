@@ -20,5 +20,3 @@ target_link_libraries(triton_jit_function
 # add_executable(test_triton_sum test_triton_sum.cpp)
 # target_link_libraries(test_triton_sum
 #   PUBLIC triton_jit_function)
-
-

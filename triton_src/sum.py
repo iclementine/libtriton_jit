@@ -1,6 +1,7 @@
 import triton
 from triton import language as tl
 
+
 @triton.jit
 def sum_kernel(
     in_ptr,
@@ -36,8 +37,9 @@ def sum_kernel(
 
 if __name__ == "__main__":
     import torch
+
     m = 1024
-    n =  1024 * 16
+    n = 1024 * 16
     x = torch.randn((m, n), device="cuda:0")
     out = torch.empty((m,), device="cuda:0")
     BLOCK_M = 1

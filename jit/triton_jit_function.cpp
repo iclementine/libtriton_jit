@@ -1,23 +1,26 @@
 #include "triton_jit_function.h"
 #include "fmt/core.h"
 
-std::unordered_map<std::string, TritonJITFunction>
-    TritonJITFunction::functions_;
+std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
 
 const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
                                                   int num_warps,
                                                   int num_stages) const {
   auto pos = this->overloads_.find(signature);
   if (pos == this->overloads_.end()) {
-    std::string cmd =
-        fmt::format("{} {} "
-                    "--kernel-name {} "
-                    "--signature {} "
-                    "--num-warps {} --num-stages {} "
-                    "{}",
-                    get_python_executable(), get_standalone_compile_script(),
-                    this->function_name_, signature, num_warps, num_stages,
-                    this->file_path_);
+    std::string cmd = fmt::format(
+        "{} {} "
+        "--kernel-name {} "
+        "--signature {} "
+        "--num-warps {} --num-stages {} "
+        "{}",
+        get_python_executable(),
+        get_standalone_compile_script(),
+        this->function_name_,
+        signature,
+        num_warps,
+        num_stages,
+        this->file_path_);
     std::cout << "Command: " << cmd << std::endl;
     std::string hash = execute_command(cmd);
     std::cout << "Output: " << hash << std::endl;
@@ -29,8 +32,7 @@ const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
   return pos->second;
 }
 
-TritonJITFunction &TritonJITFunction::getInstance(std::string_view path,
-                                                  std::string_view name) {
+TritonJITFunction &TritonJITFunction::getInstance(std::string_view path, std::string_view name) {
   const std::string function_id = fmt::format("{}:{}", path, name);
   auto pos = TritonJITFunction::functions_.find(function_id);
 
