@@ -1,7 +1,6 @@
 #include "operators/operators.h"
 #include "torch/torch.h"
 
-
 int main() {
   const torch::Device device(torch::kCUDA, 0);
   torch::Tensor a = torch::randn({10, 10}, device);

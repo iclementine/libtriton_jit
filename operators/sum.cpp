@@ -1,18 +1,17 @@
 #include "operators/operators.h"
 
-#include "c10/cuda/CUDAStream.h"
-#include "torch/torch.h"
-#include "jit/triton_jit_function.h"
 #include <iostream>
+#include "c10/cuda/CUDAStream.h"
+#include "jit/triton_jit_function.h"
+#include "torch/torch.h"
 
-#include "c10/util/DimVector.h"
+#include <filesystem>
 #include "ATen/WrapDimUtils.h"
 #include "ATen/native/ReduceOpsUtils.h"
-#include <filesystem>
+#include "c10/util/DimVector.h"
 
-std::tuple<at::Tensor, int64_t, int64_t>
-permute_reduction_axes_right(const at::Tensor &tensor,
-                             at::OptionalIntArrayRef reduction_axes_opt) {
+std::tuple<at::Tensor, int64_t, int64_t> permute_reduction_axes_right(
+    const at::Tensor &tensor, at::OptionalIntArrayRef reduction_axes_opt) {
   int64_t dim = tensor.dim();
   c10::DimVector reduction_axes;
 
@@ -20,8 +19,7 @@ permute_reduction_axes_right(const at::Tensor &tensor,
     reduction_axes = reduction_axes_opt.value().vec();
   }
 
-  std::unordered_set<int64_t> reduction_set(reduction_axes.begin(),
-                                            reduction_axes.end());
+  std::unordered_set<int64_t> reduction_set(reduction_axes.begin(), reduction_axes.end());
 
   c10::DimVector left_axes, right_axes;
   int64_t non_reduction_size = 1, reduction_size = 1;
@@ -38,8 +36,7 @@ permute_reduction_axes_right(const at::Tensor &tensor,
 
   // Concatenate left and right axes to form the new permutation order
   c10::DimVector permute_order = left_axes;
-  permute_order.insert(permute_order.end(), right_axes.begin(),
-                       right_axes.end());
+  permute_order.insert(permute_order.end(), right_axes.begin(), right_axes.end());
 
   return {tensor.permute(permute_order), non_reduction_size, reduction_size};
 }
@@ -47,19 +44,17 @@ permute_reduction_axes_right(const at::Tensor &tensor,
 // signature
 // sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType?
 // dtype=None) -> Tensor
-at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
+at::Tensor sum_dim(const at::Tensor &self,
+                   at::OptionalIntArrayRef dim,
                    bool keepdim,
                    ::std::optional<at::ScalarType> dtype) {
   at::DimVector dims_ = at::native::make_dim_vector(dim, self.dim());
   at::maybe_wrap_dims(dims_, self.dim());
-  at::DimVector shape =
-      at::meta::get_reduction_shape(self, dims_, keepdim, false);
-  c10::ScalarType out_dtype =
-      at::native::get_dtype_from_self(self, dtype, true);
+  at::DimVector shape = at::meta::get_reduction_shape(self, dims_, keepdim, false);
+  c10::ScalarType out_dtype = at::native::get_dtype_from_self(self, dtype, true);
   at::Tensor out = at::empty(shape, self.options());
 
-  auto [permuted_self, non_reduction_size, reduction_size] =
-      permute_reduction_axes_right(self, dims_);
+  auto [permuted_self, non_reduction_size, reduction_size] = permute_reduction_axes_right(self, dims_);
   permuted_self = permuted_self.contiguous();
 
   /* signature to remind yourself
@@ -73,9 +68,8 @@ at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
     STAGE: tl.constexpr,
   ):
   */
-  const TritonJITFunction &f = TritonJITFunction::getInstance(
-      std::string(get_triton_src_path() / "sum.py"),
-      "sum_kernel");
+  const TritonJITFunction &f =
+      TritonJITFunction::getInstance(std::string(get_triton_src_path() / "sum.py"), "sum_kernel");
 
   // add utility to build this automatically
   int64_t tile_m = 4;
@@ -86,7 +80,18 @@ at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
 
   c10::cuda::CUDAStream stream = c10::cuda::getCurrentCUDAStream();
   CUstream raw_stream = static_cast<CUstream>(stream.stream());
-  f(stream, num_blocks, 1, 1, num_warps, num_stages, permuted_self, out,
-    non_reduction_size, reduction_size, tile_m, tile_n, num_stages);
+  f(stream,
+    num_blocks,
+    1,
+    1,
+    num_warps,
+    num_stages,
+    permuted_self,
+    out,
+    non_reduction_size,
+    reduction_size,
+    tile_m,
+    tile_n,
+    num_stages);
   return out;
 }

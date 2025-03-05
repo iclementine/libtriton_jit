@@ -1,6 +1,11 @@
-import triton
+import importlib.util
+import json
+from argparse import ArgumentParser
 from dataclasses import dataclass
-from typing import Tuple, List
+from pathlib import Path
+from typing import List
+
+import triton
 
 
 @dataclass
@@ -25,11 +30,6 @@ def get_signature(f: triton.runtime.JITFunction):
         arg_num, constexpr_indices, non_constexpr_indices, specialised_indices
     )
 
-
-from pathlib import Path
-from argparse import ArgumentParser
-import importlib.util
-import json
 
 if __name__ == "__main__":
     # command-line arguments
