@@ -1,6 +1,8 @@
+#include "operators/operators.h"
+
 #include "c10/cuda/CUDAStream.h"
 #include "torch/torch.h"
-#include "triton_jit_function.h"
+#include "jit/triton_jit_function.h"
 #include <iostream>
 
 #include "c10/util/DimVector.h"
@@ -46,8 +48,8 @@ permute_reduction_axes_right(const at::Tensor &tensor,
 // sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType?
 // dtype=None) -> Tensor
 at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
-                   bool keepdim = false,
-                   ::std::optional<at::ScalarType> dtype = ::std::nullopt) {
+                   bool keepdim,
+                   ::std::optional<at::ScalarType> dtype) {
   at::DimVector dims_ = at::native::make_dim_vector(dim, self.dim());
   at::maybe_wrap_dims(dims_, self.dim());
   at::DimVector shape =
@@ -87,23 +89,4 @@ at::Tensor sum_dim(const at::Tensor &self, at::OptionalIntArrayRef dim,
   f(stream, num_blocks, 1, 1, num_warps, num_stages, permuted_self, out,
     non_reduction_size, reduction_size, tile_m, tile_n, num_stages);
   return out;
-}
-
-int main() {
-  const torch::Device device(torch::kCUDA, 0);
-  torch::Tensor a = torch::randn({4096, 4096}, device);
-
-  torch::Tensor tmp1 = at::sum(a, {1});
-  torch::Tensor tmp2 = sum_dim(a, {1});
-  std::cout << "ATEN:\n" << tmp1 << std::endl;
-  std::cout << "TRITON:\n" << tmp2 << std::endl;
-
-  for (int i = 0; i < 10; i++) {
-    torch::Tensor out1 = at::sum(a, {1});
-  }
-
-  for (int i = 0; i < 10; i++) {
-    torch::Tensor out2 = sum_dim(a, {1});
-  }
-  return 0;
 }

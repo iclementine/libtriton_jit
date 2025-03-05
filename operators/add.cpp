@@ -1,6 +1,7 @@
+#include "operators/operators.h"
+
 #include "c10/cuda/CUDAStream.h"
-#include "torch/torch.h"
-#include "triton_jit_function.h"
+#include "jit/triton_jit_function.h"
 #include <iostream>
 
 at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
@@ -31,23 +32,4 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   CUstream raw_stream = static_cast<CUstream>(stream.stream());
   f(stream, num_blocks, 1, 1, num_warps, num_stages, a, b, out, n, tile_size);
   return out;
-}
-
-int main() {
-  const torch::Device device(torch::kCUDA, 0);
-  torch::Tensor a = torch::randn({10, 10}, device);
-  torch::Tensor b = torch::randn({10, 10}, device);
-  torch::Tensor tmp1 = a + b;
-  torch::Tensor tmp2 = add_tensor(a, b);
-  std::cout << "ATEN:\n" << tmp1 << std::endl;
-  std::cout << "TRITON:\n" << tmp2 << std::endl;
-
-  for (int i = 0; i < 10; i++) {
-    torch::Tensor out1 = a + b;
-  }
-
-  for (int i = 0; i < 10; i++) {
-    torch::Tensor out2 = add_tensor(a, b);
-  }
-  return 0;
 }

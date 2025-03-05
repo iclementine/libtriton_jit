@@ -1,0 +1,5 @@
+add_executable(test_triton_add test_triton_add.cpp)
+target_link_libraries(test_triton_add PUBLIC operator_add)
+
+add_executable(test_triton_sum test_triton_sum.cpp)
+target_link_libraries(test_triton_sum PUBLIC operator_sum)
