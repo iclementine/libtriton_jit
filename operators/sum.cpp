@@ -10,6 +10,7 @@
 #include "ATen/native/ReduceOpsUtils.h"
 #include "c10/util/DimVector.h"
 
+namespace {
 std::tuple<at::Tensor, int64_t, int64_t> permute_reduction_axes_right(
     const at::Tensor &tensor, at::OptionalIntArrayRef reduction_axes_opt) {
   int64_t dim = tensor.dim();
@@ -40,7 +41,9 @@ std::tuple<at::Tensor, int64_t, int64_t> permute_reduction_axes_right(
 
   return {tensor.permute(permute_order), non_reduction_size, reduction_size};
 }
+}  // anonymous namespace
 
+namespace flaggems {
 // signature
 // sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType?
 // dtype=None) -> Tensor
@@ -95,3 +98,5 @@ at::Tensor sum_dim(const at::Tensor &self,
     num_stages);
   return out;
 }
+
+}  // namespace flaggems

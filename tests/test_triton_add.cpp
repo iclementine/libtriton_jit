@@ -6,7 +6,7 @@ int main() {
   torch::Tensor a = torch::randn({10, 10}, device);
   torch::Tensor b = torch::randn({10, 10}, device);
   torch::Tensor tmp1 = a + b;
-  torch::Tensor tmp2 = add_tensor(a, b);
+  torch::Tensor tmp2 = flaggems::add_tensor(a, b);
   std::cout << "ATEN:\n" << tmp1 << std::endl;
   std::cout << "TRITON:\n" << tmp2 << std::endl;
 
@@ -15,7 +15,7 @@ int main() {
   }
 
   for (int i = 0; i < 10; i++) {
-    torch::Tensor out2 = add_tensor(a, b);
+    torch::Tensor out2 = flaggems::add_tensor(a, b);
   }
   return 0;
 }

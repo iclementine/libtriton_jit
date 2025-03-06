@@ -7,7 +7,7 @@ int main() {
   torch::Tensor a = torch::randn({4096, 4096}, device);
 
   torch::Tensor tmp1 = at::sum(a, {1});
-  torch::Tensor tmp2 = sum_dim(a, {1});
+  torch::Tensor tmp2 = flaggems::sum_dim(a, {1});
   std::cout << "ATEN:\n" << tmp1 << std::endl;
   std::cout << "TRITON:\n" << tmp2 << std::endl;
 
@@ -16,7 +16,7 @@ int main() {
   }
 
   for (int i = 0; i < 10; i++) {
-    torch::Tensor out2 = sum_dim(a, {1});
+    torch::Tensor out2 = flaggems::sum_dim(a, {1});
   }
   return 0;
 }
