@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 include(FetchContent)
 
-project(tensor_add LANGUAGES CUDA CXX)
+project(flaggems LANGUAGES CUDA CXX)
 
 # project-wide settings
 set(CMAKE_CXX_STANDARD 17)
@@ -27,8 +27,6 @@ set(BUILD_SHARED_LIBS ON CACHE BOOL "Build fmt as shared library" FORCE)
 FetchContent_MakeAvailable(fmt)
 
 
-include_directories("${PROJECT_SOURCE_DIR}")
-
-add_subdirectory(jit)
-add_subdirectory(operators)
+include_directories("${PROJECT_SOURCE_DIR}/include")
+add_subdirectory(lib)
 add_subdirectory(tests)

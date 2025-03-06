@@ -1,4 +1,4 @@
-#include "triton_jit_function.h"
+#include "jit/triton_jit_function.h"
 #include "fmt/core.h"
 
 namespace triton_jit {

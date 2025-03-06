@@ -1,4 +1,4 @@
-#include "jit_utils.h"
+#include "jit/jit_utils.h"
 #include <array>
 #include <cstdio>
 #include <cstdlib>
@@ -41,13 +41,14 @@ const char *get_python_executable() {
 
 const char *get_gen_static_sig_script() {
   const static std::filesystem::path gen_spec_script =
-      std::filesystem::path(__FILE__).parent_path().parent_path() / "tools" / "gen_spec.py";
+      std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "tools" / "gen_spec.py";
   return gen_spec_script.c_str();
 }
 
 const char *get_standalone_compile_script() {
   const static std::filesystem::path compile_script =
-      std::filesystem::path(__FILE__).parent_path().parent_path() / "tools" / "standalone_compile.py";
+      std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "tools" /
+      "standalone_compile.py";
   return compile_script.c_str();
 }
 
@@ -75,7 +76,7 @@ std::filesystem::path get_cache_path() {
 
 std::filesystem::path get_triton_src_path() {
   const static std::filesystem::path triton_src_dir =
-      std::filesystem::path(__FILE__).parent_path().parent_path() / "triton_src";
+      std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "triton_src";
   return triton_src_dir;
 }
 }  // namespace triton_jit

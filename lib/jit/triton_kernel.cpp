@@ -1,4 +1,4 @@
-#include "triton_kernel.h"
+#include "jit/triton_kernel.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <string>
