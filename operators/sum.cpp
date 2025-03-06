@@ -44,6 +44,7 @@ std::tuple<at::Tensor, int64_t, int64_t> permute_reduction_axes_right(
 }  // anonymous namespace
 
 namespace flaggems {
+using namespace triton_jit;
 // signature
 // sum.dim_IntList(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType?
 // dtype=None) -> Tensor

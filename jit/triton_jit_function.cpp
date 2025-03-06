@@ -1,6 +1,7 @@
 #include "triton_jit_function.h"
 #include "fmt/core.h"
 
+namespace triton_jit {
 std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
 
 const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
@@ -42,3 +43,4 @@ TritonJITFunction &TritonJITFunction::getInstance(std::string_view path, std::st
   }
   return pos->second;
 }
+}  // namespace triton_jit

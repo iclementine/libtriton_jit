@@ -6,6 +6,7 @@
 
 using json = nlohmann::json;
 
+namespace triton_jit {
 void TritonKernel::lazy_init_handle() const {
   if (this->loaded_) return;
 
@@ -43,3 +44,4 @@ void TritonKernel::launch(unsigned int grid_x,
                                  args,
                                  nullptr));
 }
+}  // namespace triton_jit

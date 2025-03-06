@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 
+namespace triton_jit {
 std::string execute_command(std::string_view command) {
   std::array<char, 128> buffer;
   std::string result;
@@ -77,3 +78,4 @@ std::filesystem::path get_triton_src_path() {
       std::filesystem::path(__FILE__).parent_path().parent_path() / "triton_src";
   return triton_src_dir;
 }
+}  // namespace triton_jit

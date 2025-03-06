@@ -3,6 +3,7 @@
 #include <string>
 #include "cuda.h"
 
+namespace triton_jit {
 #define checkCudaErrors(err) __checkCudaErrors(err, __FILE__, __LINE__)
 
 // Is this good enough for error handling, exit directly?
@@ -50,3 +51,4 @@ class TritonKernel {
               CUstream stream,
               void **args) const;
 };
+}  // namespace triton_jit

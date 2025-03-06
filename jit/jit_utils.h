@@ -5,6 +5,7 @@
 #include <string>
 #include "torch/torch.h"
 
+namespace triton_jit {
 std::string execute_command(std::string_view command);
 
 inline const char *to_triton_typename(c10::ScalarType t) {
@@ -82,3 +83,5 @@ const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
 std::filesystem::path get_cache_path();
 std::filesystem::path get_triton_src_path();
+
+}  // namespace triton_jit

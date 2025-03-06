@@ -9,6 +9,7 @@
 #include "jit_utils.h"
 #include "triton_kernel.h"
 
+namespace triton_jit {
 struct StaticSignature {
   int num_args;
   std::vector<int> arg_type;
@@ -128,3 +129,4 @@ class TritonJITFunction {
 
   const TritonKernel &get_kernel(const std::string &signature, int num_warps, int num_stages) const;
 };
+}  // namespace triton_jit
