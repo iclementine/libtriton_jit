@@ -14,7 +14,7 @@ std::string execute_command(std::string_view command) {
   // Open the process and read its output
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.data(), "r"), pclose);
   if (!pipe) {
-    throw std::runtime_error("popen() failed!");
+    throw std::runtime_error("popen() failed to open pipe for command: " + std::string(command));
   }
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {

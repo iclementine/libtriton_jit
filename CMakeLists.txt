@@ -32,4 +32,4 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 include(cmake/Dependencies.cmake)
 
 add_subdirectory(lib)
-add_subdirectory(tests)
+add_subdirectory(ctests)
