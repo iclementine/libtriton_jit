@@ -1,8 +1,11 @@
 #include "jit/triton_kernel.h"
+
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include <string>
+
 #include "fmt/core.h"
+
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 

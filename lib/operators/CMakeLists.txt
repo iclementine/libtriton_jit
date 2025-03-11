@@ -9,3 +9,5 @@ target_link_libraries(operator_sum
 add_library(operators SHARED operators.cpp)
 target_link_libraries(operators
     PRIVATE operator_add operator_sum )
+
+install(TARGETS operators operator_sum operator_add)

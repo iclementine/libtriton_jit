@@ -1,32 +1,39 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
-include(FetchContent)
-
-project(flaggems LANGUAGES CUDA CXX)
+project(flaggems
+  LANGUAGES
+  CUDA CXX
+  VERSION
+  0.0.1)
 
 # project-wide settings
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Ensures only standard-compliant C++ is used
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# dependencies
-find_package(CUDAToolkit REQUIRED)
-find_package(Torch REQUIRED)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS})
+# RPATH settings
+# https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH ON)
+  set(_rpath_portable_origin "@loader_path")
+else()
+  set(_rpath_portable_origin $ORIGIN)
+endif(APPLE)
 
-FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
-FetchContent_MakeAvailable(json)
+# default Use separate rpaths during build and install phases
+set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+# Don't use the install-rpath during the build phase
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "${_rpath_portable_origin}")
+# Automatically add all linked folders that are NOT in the build directory to
+# the rpath (per library?)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt
-  GIT_TAG e69e5f977d458f2650bb346dadf2ad30c5320281) # 10.2.1
-# build fmt shared library so it can be linked against https://github.com/fmtlib/fmt/issues/833
-set(BUILD_SHARED_LIBS ON CACHE BOOL "Build fmt as shared library" FORCE)
-FetchContent_MakeAvailable(fmt)
+include(cmake/Dependencies.cmake)
 
-
-include_directories("${PROJECT_SOURCE_DIR}/include")
 add_subdirectory(lib)
 add_subdirectory(tests)
+
+install(
+  DIRECTORY "${CMAKE_SOURCE_DIR}/include/jit" "${CMAKE_SOURCE_DIR}/include/operators"
+  DESTINATION "include")

@@ -1,12 +1,14 @@
 #pragma once
 
-#include <filesystem>
-#include <nlohmann/json.hpp>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <type_traits>
+#include <vector>
 #include "cuda.h"
+
 #include "fmt/core.h"
-#include "jit_utils.h"
+#include "jit/jit_utils.h"
 #include "triton_kernel.h"
 
 namespace triton_jit {
@@ -110,23 +112,7 @@ class TritonJITFunction {
   static std::unordered_map<std::string, TritonJITFunction> functions_;
 
  private:
-  TritonJITFunction(std::string_view path, std::string_view name) : file_path_(path), function_name_(name) {
-    // Can we load the function with signature now?
-    // We need to know whether an argument is a constexpr
-    std::string cmd =
-        fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
-    std::cout << "Command: " << cmd << std::endl;
-    using json = nlohmann::json;
-    std::string signature = execute_command(cmd);
-    std::cout << "Output: " << signature << std::endl;
-
-    json j = json::parse(std::stringstream(signature));
-    std::vector<int> arg_types = j.get<std::vector<int>>();
-    int num_args = arg_types.size();
-    this->static_sig_ = StaticSignature {num_args, arg_types};
-    std::cout << j.dump() << std::endl;
-  }
-
+  TritonJITFunction(std::string_view path, std::string_view name);
   const TritonKernel &get_kernel(const std::string &signature, int num_warps, int num_stages) const;
 };
 }  // namespace triton_jit

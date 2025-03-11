@@ -1,8 +1,29 @@
 #include "jit/triton_jit_function.h"
+
+#include <string>
+#include <vector>
+
+#include <nlohmann/json.hpp>
 #include "fmt/core.h"
 
 namespace triton_jit {
 std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
+
+TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view name)
+    : file_path_(path), function_name_(name) {
+  std::string cmd =
+      fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
+  std::cout << "Command: " << cmd << std::endl;
+  using json = nlohmann::json;
+  std::string signature = execute_command(cmd);
+  std::cout << "Output: " << signature << std::endl;
+
+  json j = json::parse(std::stringstream(signature));
+  std::vector<int> arg_types = j.get<std::vector<int>>();
+  int num_args = arg_types.size();
+  this->static_sig_ = StaticSignature {num_args, arg_types};
+  std::cout << j.dump() << std::endl;
+}
 
 const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
                                                   int num_warps,
