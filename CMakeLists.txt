@@ -33,7 +33,3 @@ include(cmake/Dependencies.cmake)
 
 add_subdirectory(lib)
 add_subdirectory(tests)
-
-install(
-  DIRECTORY "${CMAKE_SOURCE_DIR}/include/jit" "${CMAKE_SOURCE_DIR}/include/operators"
-  DESTINATION "include")

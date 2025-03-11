@@ -23,5 +23,6 @@ target_link_libraries(triton_jit_function
   PUBLIC CUDA::cuda_driver jit_utils triton_kernel fmt::fmt
   PRIVATE nlohmann_json::nlohmann_json)
 
-install(
-  TARGETS triton_kernel jit_utils triton_jit_function)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/jit" DESTINATION "include")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/tools" DESTINATION "share/flaggems/" FILES_MATCHING PATTERN "*.py")
+install(TARGETS triton_kernel jit_utils triton_jit_function)
