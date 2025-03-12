@@ -1,4 +1,8 @@
+#include <pybind11/pybind11.h>
 #include "operators/operators.h"
+
+PYBIND11_MODULE(c_operators, m) {
+}
 
 namespace flaggems {
 TORCH_LIBRARY(flaggems, m) {
