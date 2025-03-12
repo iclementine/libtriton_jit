@@ -24,5 +24,5 @@ target_link_libraries(triton_jit_function
   PRIVATE nlohmann_json::nlohmann_json)
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/jit" DESTINATION "include")
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/tools" DESTINATION "share/flaggems/" FILES_MATCHING PATTERN "*.py")
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/scripts" DESTINATION "share/flaggems/" FILES_MATCHING PATTERN "*.py")
 install(TARGETS triton_kernel jit_utils triton_jit_function)
