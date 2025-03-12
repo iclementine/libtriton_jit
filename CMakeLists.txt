@@ -36,7 +36,7 @@ add_subdirectory(lib)
 add_subdirectory(ctests)
 
 
-# if(DEFINED SKBUILD)
+if(DEFINED SKBUILD)
   pybind11_add_module(c_operators "${PROJECT_SOURCE_DIR}/python/flaggems/csrc/cstub.cpp")
   target_link_libraries(c_operators PRIVATE operators)
   # Installing the extension module to the root of the package
@@ -65,4 +65,4 @@ add_subdirectory(ctests)
                                             "$ORIGIN/${CMAKE_INSTALL_LIBDIR}")
   endif()
 
-# endif()
+endif()
