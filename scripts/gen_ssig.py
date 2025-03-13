@@ -73,7 +73,7 @@ if __name__ == "__main__":
             arg_types.append(2)
         elif i in sig.specialised_indices:
             arg_types.append(1)
-        else:
+        else:  # non-specialzed
             arg_types.append(0)
 
     print(json.dumps(arg_types))

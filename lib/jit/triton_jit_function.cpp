@@ -1,5 +1,6 @@
 #include "jit/triton_jit_function.h"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -19,7 +20,11 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
   std::cout << "Output: " << signature << std::endl;
 
   json j = json::parse(std::stringstream(signature));
-  std::vector<int> arg_types = j.get<std::vector<int>>();
+  std::vector<int> arg_types_raw = j.get<std::vector<int>>();
+  std::vector<ArgType> arg_types(arg_types_raw.size());
+  std::transform(arg_types_raw.begin(), arg_types_raw.end(), arg_types.begin(), [](int tag) {
+    return ArgType(tag);
+  });
   int num_args = arg_types.size();
   this->static_sig_ = StaticSignature {num_args, arg_types};
   std::cout << j.dump() << std::endl;

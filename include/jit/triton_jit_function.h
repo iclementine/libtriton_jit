@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -12,9 +13,16 @@
 #include "triton_kernel.h"
 
 namespace triton_jit {
+
+enum struct ArgType : int8_t {
+  NON_CONSTEXPR = 0,
+  SPECIALIZED = 1,
+  CONSTEXPR = 2,
+};
+
 struct StaticSignature {
   int num_args;
-  std::vector<int> arg_type;
+  std::vector<ArgType> arg_type;
 };
 
 class TritonJITFunction {
@@ -55,16 +63,16 @@ class TritonJITFunction {
 
         const char *dtype = to_triton_typename(item.scalar_type());
         const char *specialization = "";
-        if (this->static_sig_.arg_type[idx] == 1) {
+        if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {
           specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers[idx]));
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
       } else if constexpr (std::is_same_v<decltype(item), std::nullopt_t>) {
         signature.push_back("*i8");
-      } else if (this->static_sig_.arg_type[idx] == 2) {  // constexpr
+      } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
         signature.push_back(fmt::format("{}", item));
-      } else if (this->static_sig_.arg_type[idx] == 1) {  // specialzied
+      } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
         const char *dtype = triton_type<decltype(item)>::name;
         const char *specialization = spec(item);
         if constexpr (std::is_integral_v<decltype(item)>) {
@@ -78,7 +86,7 @@ class TritonJITFunction {
         }
         std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
-      } else {
+      } else {  // ArgType::NON_SPECIALIZED
         const void *p_item = &item;
         kernel_args.push_back(const_cast<void *>(p_item));
         const char *dtype = triton_type<decltype(item)>::name;
