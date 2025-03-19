@@ -35,6 +35,7 @@ void TritonKernel::launch(unsigned int grid_x,
                           CUstream stream,
                           void **args) const {
   this->lazy_init_handle();
+  // TODO: some kernels need to be launched via cuLaunchKernelEx, add that later?
   checkCudaErrors(cuLaunchKernel(this->function_,
                                  grid_x,
                                  grid_y,

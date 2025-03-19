@@ -8,7 +8,7 @@ learn the mapping between
 
 to get some understanding of ptx and SASS.
 """
-
+import torch
 import triton
 from triton import language as tl
 
@@ -23,3 +23,18 @@ def binary_pointwise_kernel(X, Y, Out, n, BLOCK_N: tl.constexpr):
     y = tl.load(Y + offsets, mask=mask)
     o = x + y
     tl.store(Out + offsets, o, mask=mask)
+
+
+def binary_add_tensor(x, y):
+    dtype = torch.promote_types(x.dtype, y.dtype)
+    x, y = torch.broadcast_tensors(x, y)
+    x = x.contiguous()
+    y = y.contiguous()
+    out = torch.empty_like(x, dtype=dtype)
+    n = out.numel()
+    BLOCK_N = 1024
+    grid = (triton.cdiv(n, BLOCK_N), 1, 1)
+    binary_pointwise_kernel[grid](
+        x, y, out, n, BLOCK_N=BLOCK_N, num_warps=8, num_stages=1
+    )
+    return out

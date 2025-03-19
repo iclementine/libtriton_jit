@@ -37,13 +37,12 @@ class TritonJITFunction {
                   unsigned int num_warps,
                   unsigned int num_stages,
                   Args... args) const {
-    // requires:
-    // 1. signature from kernel
-    // build signature (requires args processing) -> build a source for the
-    // function & call it. get kernel (requires this*(for path & name)) pick
-    // argument to the kernel & launch (requires signature from kernel)
     const int num_args = this->static_sig_.num_args;
 
+    // since we need to take address of all the arguemnts to the kernel to launch a kernel
+    // but data pointers are not the arguement of the function operator(), they are local variables
+    // that are created in `arg_handle`, to take the addresses of them, we need to keep them alive
+    // out of the function
     std::vector<void *> data_pointers;
     data_pointers.reserve(num_args);
 
@@ -78,6 +77,8 @@ class TritonJITFunction {
         if constexpr (std::is_integral_v<decltype(item)>) {
           if (specialization != ":1") {
             const void *p_item = &item;
+            // cuLaunchKernel requires `void*`, so if the argument is const,
+            // we need to const_cast to remove the const qualifier to call it
             kernel_args.push_back(const_cast<void *>(p_item));
           }
         } else {
