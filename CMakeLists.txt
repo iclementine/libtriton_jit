@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 project(flaggems
-  LANGUAGES
-  CUDA CXX
-  VERSION
-  0.0.1)
+  LANGUAGES CUDA CXX
+  VERSION 0.0.1)
 
 # project-wide settings
 set(CMAKE_CXX_STANDARD 17)
@@ -35,7 +33,6 @@ include(cmake/Dependencies.cmake)
 add_subdirectory(lib)
 add_subdirectory(ctests)
 
-
 if(DEFINED SKBUILD)
   pybind11_add_module(c_operators "${PROJECT_SOURCE_DIR}/python/flaggems/csrc/cstub.cpp")
   target_link_libraries(c_operators PRIVATE operators)
@@ -43,20 +40,6 @@ if(DEFINED SKBUILD)
   install(TARGETS c_operators
           LIBRARY DESTINATION ".")
 
-  # configure_file("${PROJECT_SOURCE_DIR}/src/hello/__main__.py.in"
-  #                "${PROJECT_BINARY_DIR}/src/hello/__main__.py")
-
-  # install(FILES "${PROJECT_BINARY_DIR}/src/hello/__main__.py" DESTINATION .)
-
-  # The extension module must load the hello library as a dependency when the
-  # extension module is loaded. The easiest way to locate the hello library is
-  # via RPATH. Absolute RPATHs are possible, but they make the resulting
-  # binaries not redistributable to other Python installations (conda is broke,
-  # wheel reuse is broke, and more!).
-  #
-  # Placing the hello library in the package and using relative RPATHs that
-  # doesn't point outside of the package means that the built package is
-  # relocatable. This allows for safe binary redistribution.
   if(APPLE)
     set_target_properties(
       c_operators PROPERTIES INSTALL_RPATH "@loader_path/${CMAKE_INSTALL_LIBDIR}")
@@ -64,5 +47,4 @@ if(DEFINED SKBUILD)
     set_target_properties(c_operators PROPERTIES INSTALL_RPATH
                                             "$ORIGIN/${CMAKE_INSTALL_LIBDIR}")
   endif()
-
 endif()

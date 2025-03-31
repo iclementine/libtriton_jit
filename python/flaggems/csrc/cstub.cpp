@@ -1,6 +1,8 @@
 #include <pybind11/pybind11.h>
 #include "operators/operators.h"
 
+// TODO: use pytorch's argparse utilities to generate CPython bindings, since it is more efficient than
+// bindings provided by torch library, since it is in a boxed fashion
 PYBIND11_MODULE(c_operators, m) {
 }
 

@@ -134,34 +134,6 @@ def compile_a_kernel(
         triton.runtime.driver.active.get_current_target()
     )
     ccinfo: triton.compiler.CompiledKernel = triton.compile(src, target, options=opts)
-
-    # ccinfo is the compiled kernel, also , it has a lot of side effects
-    # that writes to the file system cache
-    # in jit case, the compiled kernel is returned to populate the per-JitFunction in-memory cache
-    # but here we have to generate code to launch the kernel in c++
-
-    # arg_names = []
-    # arg_types = []
-    # for i in signature_without_spec.keys():
-    #     if i not in equal_to_1:
-    #         arg_names += [fn.arg_names[i]]
-    #         arg_types += [signature_without_spec[i]]
-
-    # params = {
-    #     "cubin_path": (Path(os.environ["TRITON_CACHE_DIR"]).expanduser() / ccinfo.hash / ccinfo.name).with_suffix(".cubin").absolute() ,
-    #     "kernel_name": fn.__name__,
-    #     "triton_kernel_name": fn.__name__,
-    #     "signature": ", ".join([f"{ty_to_cpp(ty)} {name}" for name, ty in zip(arg_names, arg_types)]),
-    #     "arg_pointers": ", ".join([f"&{arg}" for arg in arg_names]),
-    #     "num_args": len(arg_names),
-    #     "shared": ccinfo.metadata.shared,
-    #     "num_warps": num_warps,
-    # }
-    # for ext in ['h', 'c']:
-    #     template_path = Path(__file__).parent / f"triton_kernel_template.{ext}"
-    #     with Path(f"{ccinfo.name}.{ext}").open("wt", encoding="utf-8") as fp:
-    #         fp.write(Path(template_path).read_text(encoding="utf-8").format(**params))
-
     return ccinfo.name, ccinfo.hash
 
 
