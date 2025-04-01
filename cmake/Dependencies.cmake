@@ -3,13 +3,8 @@ include(FetchContent)
 # dependencies: cuda toolkit
 find_package(CUDAToolkit REQUIRED)
 
-# dependencies: torch
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
-execute_process(COMMAND ${Python_EXECUTABLE} "-c" "import torch;print(torch.utils.cmake_prefix_path)"
-                OUTPUT_VARIABLE Torch_ROOT_RAW
-                COMMAND_ECHO STDOUT)
-string(STRIP ${Torch_ROOT_RAW} Torch_ROOT)
-find_package(Torch REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+find_package(Torch MODULE REQUIRED) # This is the FindTorch.cmake
 
 # dependencies: json
 if (TRITON_JIT_USE_EXTERNAL_JSON)

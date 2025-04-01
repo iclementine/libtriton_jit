@@ -62,13 +62,12 @@ const char *get_gen_static_sig_script() {
   // <install_prefix>/share/flaggems/scripts/gen_ssig.py
   const static std::filesystem::path script_path = []() {
     std::filesystem::path installed_script_path = get_path_of_this_library().parent_path().parent_path() /
-                                                  "share" / "flaggems" / "scripts" / "gen_ssig.py";
+                                                  "share" / "triton_jit" / "scripts" / "gen_ssig.py";
     if (std::filesystem::exists(installed_script_path)) {
       return installed_script_path;
     } else {
       std::filesystem::path source_script_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "scripts" /
-          "gen_ssig.py";
+          std::filesystem::path(__FILE__).parent_path().parent_path() / "scripts" / "gen_ssig.py";
       return source_script_path;
     }
   }();
@@ -79,13 +78,13 @@ const char *get_standalone_compile_script() {
   // <install_prefix>/share/flaggems/scripts/standalone_compile.py
   const static std::filesystem::path script_path = []() {
     std::filesystem::path installed_script_path = get_path_of_this_library().parent_path().parent_path() /
-                                                  "share" / "flaggems" / "scripts" / "standalone_compile.py";
+                                                  "share" / "triton_jit" / "scripts" /
+                                                  "standalone_compile.py";
     if (std::filesystem::exists(installed_script_path)) {
       return installed_script_path;
     } else {
       std::filesystem::path source_script_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path().parent_path() / "scripts" /
-          "standalone_compile.py";
+          std::filesystem::path(__FILE__).parent_path().parent_path() / "scripts" / "standalone_compile.py";
       return source_script_path;
     }
   }();
