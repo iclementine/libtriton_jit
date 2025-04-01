@@ -38,8 +38,8 @@ include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/TritonJITConfig.cmake"
   INSTALL_DESTINATION "lib/cmake/TritonJIT"
-  NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+  # NO_SET_AND_CHECK_MACRO
+  # NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 # generate the config file that includes the version: TritonJITConfigVersion.cmake
 write_basic_package_version_file(
