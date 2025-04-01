@@ -35,7 +35,7 @@ add_subdirectory(src)
 # --------------------------- installtion of cmake package ---------------------------
 include(CMakePackageConfigHelpers)
 # generate the config file that includes the exports: TritonJITConfig.cmake
-configure_package_config_file(${CMAKE_SOURCE_DIR}/cmake/Config.cmake.in
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/TritonJITConfig.cmake"
   INSTALL_DESTINATION "lib/cmake/TritonJIT"
   # NO_SET_AND_CHECK_MACRO
