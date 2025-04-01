@@ -71,6 +71,4 @@ const char *get_python_executable();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
 std::filesystem::path get_cache_path();
-std::filesystem::path get_triton_src_path();
-
 }  // namespace triton_jit

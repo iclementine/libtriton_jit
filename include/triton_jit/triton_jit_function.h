@@ -9,8 +9,8 @@
 #include "cuda.h"
 
 #include "fmt/core.h"
-#include "jit/jit_utils.h"
-#include "triton_kernel.h"
+#include "triton_jit/jit_utils.h"
+#include "triton_jit/triton_kernel.h"
 
 namespace triton_jit {
 

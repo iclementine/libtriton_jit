@@ -1,11 +1,11 @@
-#include "jit/triton_jit_function.h"
+#include "triton_jit/triton_jit_function.h"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
 #include "fmt/core.h"
+#include "nlohmann/json.hpp"
 
 namespace triton_jit {
 std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;

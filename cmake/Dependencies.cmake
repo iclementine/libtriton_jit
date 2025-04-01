@@ -11,16 +11,8 @@ execute_process(COMMAND ${Python_EXECUTABLE} "-c" "import torch;print(torch.util
 string(STRIP ${Torch_ROOT_RAW} Torch_ROOT)
 find_package(Torch REQUIRED)
 
-# depedencies: pybind11
-execute_process(COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir
-  OUTPUT_VARIABLE pybind11_ROOT_RAW
-  COMMAND_ECHO STDOUT)
-string(STRIP ${pybind11_ROOT_RAW} pybind11_ROOT)
-find_package(pybind11)
-
-
 # dependencies: json
-if (FLAGGEMS_USE_EXTERNAL_JSON)
+if (TRITON_JIT_USE_EXTERNAL_JSON)
   find_package(nlohmann_json VERSION 3.11.3 REQUIRED)
 else()
   FetchContent_Declare(json
@@ -31,7 +23,7 @@ else()
 endif()
 
 # dependencies: fmtlib
-if (FLAGGEMS_USE_EXTERNAL_FMTLIB)
+if (TRITON_JIT_USE_EXTERNAL_FMTLIB)
   find_package(fmt VERSION 10.2.1 REQUIRED)
 else()
   FetchContent_Declare(fmt
