@@ -27,9 +27,13 @@ struct StaticSignature {
 };
 
 class TritonJITFunction {
- public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+ private:
+  std::string file_path_;
+  std::string function_name_;
+  StaticSignature static_sig_;
+  mutable std::unordered_map<std::string, TritonKernel> overloads_;
 
+ public:
   template <typename... Args>
   void operator()(CUstream stream,
                   unsigned int grid_x,
@@ -108,21 +112,31 @@ class TritonJITFunction {
       }
     }
 
-    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages);
+    // TODO: device or compute capability to compile
+    CUcontext ctx;
+    checkCudaErrors(cuStreamGetCtx(stream, &ctx));
+    checkCudaErrors(cuCtxSetCurrent(ctx));  // redundant?
+    CUdevice d;                             // int
+    checkCudaErrors(
+        cuCtxGetDevice(&d));  // device management is done with torch, assume one CUcontext per device
+
+    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
     kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
     return;
   }
 
  private:
-  std::string file_path_;
-  std::string function_name_;
-  StaticSignature static_sig_;
-  mutable std::unordered_map<std::string, TritonKernel> overloads_;
+  const TritonKernel &get_kernel(const std::string &signature,
+                                 int num_warps,
+                                 int num_stages,
+                                 CUdevice device_index) const;
 
-  static std::unordered_map<std::string, TritonJITFunction> functions_;
+ public:
+  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
 
  private:
+  static std::unordered_map<std::string, TritonJITFunction> functions_;
   TritonJITFunction(std::string_view path, std::string_view name);
-  const TritonKernel &get_kernel(const std::string &signature, int num_warps, int num_stages) const;
 };
+
 }  // namespace triton_jit

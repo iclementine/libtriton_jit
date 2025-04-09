@@ -23,7 +23,7 @@ std::string execute_command(std::string_view command) {
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
   }
-  if (!result.empty() && result.back() == '\n') {
+  while (!result.empty() && result.back() == '\n') {
     result.pop_back();
   }
   return result;

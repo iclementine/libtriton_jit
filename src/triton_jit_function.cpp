@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <type_traits>
+#include <utility>
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
 
@@ -32,7 +34,8 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
 
 const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
                                                   int num_warps,
-                                                  int num_stages) const {
+                                                  int num_stages,
+                                                  CUdevice device_index) const {
   auto pos = this->overloads_.find(signature);
   if (pos == this->overloads_.end()) {
     std::string cmd = fmt::format(
@@ -40,6 +43,7 @@ const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
         "--kernel-name {} "
         "--signature {} "
         "--num-warps {} --num-stages {} "
+        "--device-id {} "
         "{}",
         get_python_executable(),
         get_standalone_compile_script(),
@@ -47,14 +51,16 @@ const TritonKernel &TritonJITFunction::get_kernel(const std::string &signature,
         signature,
         num_warps,
         num_stages,
+        device_index,
         this->file_path_);
     std::cout << "Command: " << cmd << std::endl;
     std::string hash = execute_command(cmd);
     std::cout << "Output: " << hash << std::endl;
 
+    std::string sig = signature;
     std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);
-    pos = this->overloads_.emplace(signature, kernel).first;
+    pos = this->overloads_.emplace(std::move(sig), std::move(kernel)).first;
   }
   return pos->second;
 }
@@ -65,7 +71,7 @@ TritonJITFunction &TritonJITFunction::getInstance(std::string_view path, std::st
 
   if (pos == TritonJITFunction::functions_.end()) {
     TritonJITFunction f(path, name);
-    pos = TritonJITFunction::functions_.emplace(function_id, f).first;
+    pos = TritonJITFunction::functions_.emplace(std::move(function_id), std::move(f)).first;
   }
   return pos->second;
 }

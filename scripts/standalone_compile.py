@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from typing import List, Tuple, Union
 
+import torch
 import triton
 
 # use a separate cache for flaggems triton kernels
@@ -71,6 +72,7 @@ def compile_a_kernel(
     signature: str,
     num_warps: int = 4,
     num_stages: int = 3,
+    device_id: int = 0,
 ) -> Tuple[str, str]:
     """compile a kernel."""
     # validate and parse signature
@@ -129,11 +131,14 @@ def compile_a_kernel(
     # STEP2: compile options for the backend
     opts = {"num_warps": num_warps, "num_stages": num_stages}
 
-    # STEP3: ast source, target, compile options
-    target: triton.backends.compiler.GPUTarget = (
-        triton.runtime.driver.active.get_current_target()
-    )
-    ccinfo: triton.compiler.CompiledKernel = triton.compile(src, target, options=opts)
+    with torch.cuda.device(device_id):
+        # STEP3: ast source, target, compile options
+        target: triton.backends.compiler.GPUTarget = (
+            triton.runtime.driver.active.get_current_target()
+        )
+        ccinfo: triton.compiler.CompiledKernel = triton.compile(
+            src, target, options=opts
+        )
     return ccinfo.name, ccinfo.hash
 
 
@@ -151,6 +156,13 @@ if __name__ == "__main__":
         type=str,
         default="",
         help="Name of the kernel to compile",
+        required=True,
+    )
+    parser.add_argument(
+        "--device-id",
+        type=int,
+        default="",
+        help="Targeting device id",
         required=True,
     )
     parser.add_argument(
