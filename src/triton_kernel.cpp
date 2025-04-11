@@ -1,6 +1,7 @@
 #include "triton_jit/triton_kernel.h"
 
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "fmt/core.h"
@@ -9,7 +10,7 @@
 using json = nlohmann::json;
 
 namespace triton_jit {
-TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
+TritonKernel::TritonKernel(const std::string& dir, const std::string& kernel_name)
     : dir_(dir), kernel_name_(kernel_name) {
   std::string metadata_path = fmt::format("{}/{}.json", this->dir_, this->kernel_name_);
   std::ifstream f(metadata_path.c_str());
@@ -17,17 +18,20 @@ TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
   // shared and arch are bound to a kernel dir
   this->shared_ = meta_data["shared"];
   this->arch_ = meta_data["target"]["arch"];
+  std::cout << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_)
+            << std::endl;
 }
 
 void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   if (modules_.count(device_index)) {
+    std::cout << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
     return;
   }
 
   // check cuda arch
   int major = 0, minor = 0;
-  cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device_index);
-  cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device_index);
+  checkCudaErrors(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device_index));
+  checkCudaErrors(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device_index));
   unsigned int arch = major * 10 + minor;
   if (arch != this->arch_) {
     throw std::runtime_error("compute architecture mismatch!");
@@ -35,8 +39,9 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
 
   CUmodule module;
   std::string cubin_path = fmt::format("{}/{}.cubin", this->dir_, this->kernel_name_);
+  std::cout << fmt::format("Loading cubin {} into {}", cubin_path, device_index) << std::endl;
   checkCudaErrors(cuModuleLoad(&module, cubin_path.c_str()));
-  modules_[device_index] = module;
+  this->modules_.emplace(device_index, module);
 }
 
 // consider using a variadic template
@@ -45,7 +50,7 @@ void TritonKernel::launch(unsigned int grid_x,
                           unsigned int grid_z,
                           int num_warps,
                           CUstream stream,
-                          void **args) const {
+                          void** args) const {
   // get the context associated with the stream
   CUcontext ctx;
   checkCudaErrors(cuStreamGetCtx(stream, &ctx));

@@ -26,16 +26,17 @@ inline void __checkCudaErrors(CUresult code, const char *file, const int line) {
 
 class TritonKernel {
  private:
-  std::string
-      dir_; /* The directory that contain the IRs(ttir, ttgir, llir, ptx, cubin) & metadata(json file))*/
-  std::string kernel_name_; /* name of the kernel in cubin */
-  unsigned int shared_;     /* amount of static shared memory per block (in bytes) required for the cubin*/
-  unsigned int arch_;       /* cuda arch */
-  mutable std::unordered_map<int /*device id*/, CUmodule /*module*/>
+  // * The directory that contain the IRs(ttir, ttgir, llir, ptx, cubin) & metadata(json file))*/
+  std::string dir_;
+  /* name of the kernel in cubin */
+  std::string kernel_name_;
+  unsigned int shared_; /* amount of static shared memory per block (in bytes) required for the cubin*/
+  unsigned int arch_;   /* cuda arch */
+  mutable std::unordered_map<CUdevice /*device id*/, CUmodule /*module*/>
       modules_; /*loaded modules, possibly one per device if the arch matches*/
 
  public:
-  TritonKernel(std::string_view dir, std::string_view kernel_name);
+  TritonKernel(const std::string &dir, const std::string &kernel_name);
 
   void launch(unsigned int grid_x,
               unsigned int grid_y,

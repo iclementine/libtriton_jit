@@ -38,8 +38,12 @@ This directory includes some code to test the operators. The operators should be
 
 ## how to build
 
-1. activate a python virtual environment where torch is installed
-2. mkdir build & cd build
-3. cmake -DCMAKE_PREFIX_PATH=`python3 -c 'import torch;print(torch.utils.cmake_prefix_path)'` ..
+1. Activate a python virtual environment where torch is installed;
+2. Configure & Generate build system: specify which python root to use, we would use the torch installed within it.
+  command: `cmake -S . -B build -DPython_ROOT="$(which python)/../.."`
+3. Build: `cmake --build build --parallel`
 
 ## how to use
+
+1. via find_package
+2. via FetchContent

@@ -4,7 +4,6 @@
 #include <optional>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 #include "cuda.h"
@@ -116,9 +115,9 @@ class TritonJITFunction {
     CUcontext ctx;
     checkCudaErrors(cuStreamGetCtx(stream, &ctx));
     checkCudaErrors(cuCtxSetCurrent(ctx));  // redundant?
-    CUdevice d;                             // int
-    checkCudaErrors(
-        cuCtxGetDevice(&d));  // device management is done with torch, assume one CUcontext per device
+    CUdevice d;
+    // device management is done with torch, assume one CUcontext per device                         // int
+    checkCudaErrors(cuCtxGetDevice(&d));
 
     const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
     kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
@@ -132,11 +131,11 @@ class TritonJITFunction {
                                  CUdevice device_index) const;
 
  public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+  static TritonJITFunction &getInstance(const std::string &path, const std::string &name);
 
  private:
   static std::unordered_map<std::string, TritonJITFunction> functions_;
-  TritonJITFunction(std::string_view path, std::string_view name);
+  TritonJITFunction(const std::string &path, const std::string &name);
 };
 
 }  // namespace triton_jit
