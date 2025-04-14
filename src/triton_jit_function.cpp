@@ -12,8 +12,8 @@
 namespace triton_jit {
 std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
 
-TritonJITFunction::TritonJITFunction(const std::string& path, const std::string& name)
-    : file_path_(path), function_name_(name) {
+TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view name)
+    : file_path_(std::string(path)), function_name_(std::string(name)) {
   std::string cmd =
       fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
   std::cout << "(Extracting Static Signature) Command: " << cmd << std::endl;
@@ -32,10 +32,11 @@ TritonJITFunction::TritonJITFunction(const std::string& path, const std::string&
   std::cout << j.dump() << std::endl;
 }
 
-const TritonKernel& TritonJITFunction::get_kernel(const std::string& signature,
+const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_warps,
                                                   int num_stages,
                                                   CUdevice device_index) const {
+  std::string signature(_signature);
   auto pos = this->overloads_.find(signature);
   if (pos == this->overloads_.end()) {
     std::string cmd = fmt::format(
@@ -71,7 +72,7 @@ const TritonKernel& TritonJITFunction::get_kernel(const std::string& signature,
   return pos->second;
 }
 
-TritonJITFunction& TritonJITFunction::getInstance(const std::string& path, const std::string& name) {
+TritonJITFunction& TritonJITFunction::getInstance(std::string_view path, std::string_view name) {
   std::string function_id = fmt::format("{}:{}", path, name);
   auto pos = TritonJITFunction::functions_.find(function_id);
 

@@ -125,17 +125,17 @@ class TritonJITFunction {
   }
 
  private:
-  const TritonKernel &get_kernel(const std::string &signature,
+  const TritonKernel &get_kernel(std::string_view signature,
                                  int num_warps,
                                  int num_stages,
                                  CUdevice device_index) const;
 
  public:
-  static TritonJITFunction &getInstance(const std::string &path, const std::string &name);
+  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
 
  private:
   static std::unordered_map<std::string, TritonJITFunction> functions_;
-  TritonJITFunction(const std::string &path, const std::string &name);
+  TritonJITFunction(std::string_view path, std::string_view name);
 };
 
 }  // namespace triton_jit

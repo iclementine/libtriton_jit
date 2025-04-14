@@ -36,7 +36,7 @@ class TritonKernel {
       modules_; /*loaded modules, possibly one per device if the arch matches*/
 
  public:
-  TritonKernel(const std::string &dir, const std::string &kernel_name);
+  TritonKernel(std::string_view dir, std::string_view kernel_name);
 
   void launch(unsigned int grid_x,
               unsigned int grid_y,

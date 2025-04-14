@@ -10,8 +10,8 @@
 using json = nlohmann::json;
 
 namespace triton_jit {
-TritonKernel::TritonKernel(const std::string& dir, const std::string& kernel_name)
-    : dir_(dir), kernel_name_(kernel_name) {
+TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
+    : dir_(std::string(dir)), kernel_name_(std::string(kernel_name)) {
   std::string metadata_path = fmt::format("{}/{}.json", this->dir_, this->kernel_name_);
   std::ifstream f(metadata_path.c_str());
   json meta_data = json::parse(f);
@@ -24,7 +24,7 @@ TritonKernel::TritonKernel(const std::string& dir, const std::string& kernel_nam
 
 void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   if (modules_.count(device_index)) {
-    std::cout << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
+    // std::cout << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
     return;
   }
 

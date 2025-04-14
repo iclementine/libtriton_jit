@@ -1,34 +1,23 @@
-# targets
-## --------------------------- triton_kernel ---------------------------
-add_library(triton_kernel SHARED triton_kernel.cpp)
-target_include_directories(triton_kernel
-  PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-target_link_libraries(triton_kernel
-  PUBLIC CUDA::cuda_driver
-  PRIVATE nlohmann_json::nlohmann_json fmt::fmt-header-only)
-
-## --------------------------- jit utils ---------------------------
-add_library(jit_utils SHARED jit_utils.cpp)
-target_include_directories(jit_utils
-  PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>)
-target_link_libraries(jit_utils PUBLIC Torch::Torch)
-
+# Since the library links torch, we need to ensure the same ABI with pre-compiled torch
+# libtorch installed from pypi is not built with cxx11 abi,
+# if we split the library into several targets, we need to ensure that the ABI is the same
+# with torch. It is a bit ugly to specify a target that does not depend on torch to use
+# the cxx flags from torch, so we just merge then as one target, for simplicity
+# then it can use the same cxx flags with public dependency transitivity
 # --------------------------- triton jit function ---------------------------
-add_library(triton_jit SHARED triton_jit_function.cpp)
+add_library(triton_jit SHARED triton_jit_function.cpp jit_utils.cpp triton_kernel.cpp)
+target_include_directories(triton_jit
+  PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 target_link_libraries(triton_jit
-  PUBLIC CUDA::cuda_driver jit_utils triton_kernel fmt::fmt-header-only
+  PUBLIC Torch::Torch CUDA::cuda_driver fmt::fmt-header-only
   PRIVATE nlohmann_json::nlohmann_json)
 
 # --------------------------- alias targets ---------------------------
 # This is the target used in FetchContent, since FetchContent use add_subdirectory (a sub project build)
 # So to use consistent target name, add namespace here
 add_library(TritonJIT::triton_jit ALIAS triton_jit)
-add_library(TritonJIT::jit_utils ALIAS jit_utils)
-add_library(TritonJIT::triton_kernel ALIAS triton_kernel)
 
 # --------------------------- install ---------------------------
 include(GNUInstallDirs)
@@ -36,7 +25,7 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/triton_jit" DESTINATION ${CMAKE
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/scripts"
   DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/triton_jit/" FILES_MATCHING PATTERN "*.py")
 install(
-  TARGETS triton_kernel jit_utils triton_jit
+  TARGETS triton_jit
   EXPORT TritonJITTargets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
