@@ -6,6 +6,7 @@
 
 #include <type_traits>
 #include <utility>
+#include "c10/util/Logging.h"  // use torch's logging
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
 
@@ -16,10 +17,10 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
     : file_path_(std::string(path)), function_name_(std::string(name)) {
   std::string cmd =
       fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
-  std::cout << "(Extracting Static Signature) Command: " << cmd << std::endl;
+  LOG(INFO) << "(Extracting Static Signature) Command: " << cmd << std::endl;
   using json = nlohmann::json;
   std::string signature = execute_command(cmd);
-  std::cout << "Output: " << signature << std::endl;
+  LOG(INFO) << "Output: " << signature << std::endl;
 
   json j = json::parse(std::stringstream(signature));
   std::vector<int> arg_types_raw = j.get<std::vector<int>>();
@@ -29,7 +30,7 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
   });
   int num_args = arg_types.size();
   this->static_sig_ = StaticSignature {num_args, arg_types};
-  std::cout << j.dump() << std::endl;
+  LOG(INFO) << j.dump() << std::endl;
 }
 
 const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
@@ -54,14 +55,14 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
         num_stages,
         device_index,
         this->file_path_);
-    std::cout << "(JIT compiling) Command: " << cmd << std::endl;
+    LOG(INFO) << "(JIT compiling) Command: " << cmd << std::endl;
     std::string hash = execute_command(cmd);
-    std::cout << "Output: " << hash << std::endl;
+    LOG(INFO) << "Output: " << hash << std::endl;
 
     std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);
-    std::cout << fmt::format("kernel_dir: {}", kernel_dir);
-    std::cout << fmt::format("kernel_name: {}", this->function_name_);
+    LOG(INFO) << fmt::format("kernel_dir: {}", kernel_dir);
+    LOG(INFO) << fmt::format("kernel_name: {}", this->function_name_);
     auto result = this->overloads_.insert({signature, kernel});
     if (result.second) {
       pos = result.first;

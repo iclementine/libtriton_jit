@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "c10/util/Logging.h"  // use torch's logging
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
 
@@ -18,13 +19,13 @@ TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
   // shared and arch are bound to a kernel dir
   this->shared_ = meta_data["shared"];
   this->arch_ = meta_data["target"]["arch"];
-  std::cout << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_)
+  LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_)
             << std::endl;
 }
 
 void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   if (modules_.count(device_index)) {
-    // std::cout << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
+    // LOG(INFO) << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
     return;
   }
 
@@ -39,7 +40,7 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
 
   CUmodule module;
   std::string cubin_path = fmt::format("{}/{}.cubin", this->dir_, this->kernel_name_);
-  std::cout << fmt::format("Loading cubin {} into {}", cubin_path, device_index) << std::endl;
+  LOG(INFO) << fmt::format("Loading cubin {} into {}", cubin_path, device_index) << std::endl;
   checkCudaErrors(cuModuleLoad(&module, cubin_path.c_str()));
   this->modules_.emplace(device_index, module);
 }
