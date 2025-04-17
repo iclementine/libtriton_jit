@@ -86,12 +86,13 @@ class TritonJITFunction {
             kernel_args.push_back(const_cast<void *>(p_item));
           }
           std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
+          signature.push_back(sig_for_idx);
         } else {
           const void *p_item = &item;
           kernel_args.push_back(const_cast<void *>(p_item));
           std::string sig_for_idx = fmt::format("{}", dtype);
+          signature.push_back(sig_for_idx);
         }
-        signature.push_back(sig_for_idx);
       } else {  // ArgType::NON_SPECIALIZED
         const void *p_item = &item;
         kernel_args.push_back(const_cast<void *>(p_item));
