@@ -77,19 +77,20 @@ class TritonJITFunction {
         signature.push_back(fmt::format("{}", item));
       } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
         const char *dtype = triton_type<decltype(item)>::name;
-        const char *specialization = spec(item);
         if constexpr (std::is_integral_v<decltype(item)>) {
+          const char *specialization = spec(item);
           if (specialization != ":1") {
             const void *p_item = &item;
             // cuLaunchKernel requires `void*`, so if the argument is const,
             // we need to const_cast to remove the const qualifier to call it
             kernel_args.push_back(const_cast<void *>(p_item));
           }
+          std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
         } else {
           const void *p_item = &item;
           kernel_args.push_back(const_cast<void *>(p_item));
+          std::string sig_for_idx = fmt::format("{}", dtype);
         }
-        std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
       } else {  // ArgType::NON_SPECIALIZED
         const void *p_item = &item;
