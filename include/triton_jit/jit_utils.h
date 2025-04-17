@@ -57,8 +57,8 @@ struct triton_type_helper;
 DEFINE_TRITON_TYPE(bool, "i1");
 DEFINE_TRITON_TYPE(int, "i32");
 DEFINE_TRITON_TYPE(int64_t, "i64");
-DEFINE_TRITON_TYPE(float, "f32");
-DEFINE_TRITON_TYPE(double, "f64");
+DEFINE_TRITON_TYPE(float, "fp32");
+DEFINE_TRITON_TYPE(double, "fp64");
 DEFINE_TRITON_TYPE(std::nullptr_t, "*i8");
 
 #undef DEFINE_TRITON_TYPE
