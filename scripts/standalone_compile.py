@@ -81,8 +81,21 @@ def compile_a_kernel(
     # split it
     signature: List[str] = list(map(lambda s: s.strip(" "), signature.split(",")))
 
+    def parse_bool(s: str) -> bool:
+        if s.lower() == "true":
+            return True
+        elif s.lower() == "false":
+            return False
+        else:
+            raise ValueError(f"{s} is not a boolean")
+
     def constexpr(s: str) -> Union[int, float]:
         """Extract constexpr from signature"""
+        try:
+            ret = parse_bool(s)
+            return ret
+        except ValueError:
+            pass
         try:
             ret = int(s)
             return ret
