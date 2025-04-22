@@ -77,7 +77,7 @@ class TritonJITFunction {
         signature.push_back(fmt::format("{}", item));
       } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
         const char *dtype = triton_type<decltype(item)>::name;
-        if constexpr (std::is_integral_v<decltype(item)>) {
+        if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
           const char *specialization = spec(item);
           if (specialization != ":1") {
             const void *p_item = &item;
