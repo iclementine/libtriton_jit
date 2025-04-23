@@ -32,3 +32,6 @@ if (NOT TARGET Torch::Torch)
   target_compile_options(Torch::Torch INTERFACE ${TORCH_CXX_FLAGS})
   message(STATUS "torch interface cxx flag ${TORCH_CXX_FLAGS}")
 endif()
+
+add_compile_options(${TORCH_CXX_FLAGS})
+message(STATUS "Using ABI for the whole project from torch: ${TORCH_CXX_FLAGS}")

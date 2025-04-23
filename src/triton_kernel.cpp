@@ -19,13 +19,12 @@ TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
   // shared and arch are bound to a kernel dir
   this->shared_ = meta_data["shared"];
   this->arch_ = meta_data["target"]["arch"];
-  LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_)
-            << std::endl;
+  LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_);
 }
 
 void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   if (modules_.count(device_index)) {
-    // LOG(INFO) << fmt::format("cubin is loaded on device {}", device_index) << std::endl;
+    LOG(INFO) << fmt::format("cubin is loaded on device {}", device_index);
     return;
   }
 
@@ -40,7 +39,7 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
 
   CUmodule module;
   std::string cubin_path = fmt::format("{}/{}.cubin", this->dir_, this->kernel_name_);
-  LOG(INFO) << fmt::format("Loading cubin {} into {}", cubin_path, device_index) << std::endl;
+  LOG(INFO) << fmt::format("Loading cubin {} into {}", cubin_path, device_index);
   checkCudaErrors(cuModuleLoad(&module, cubin_path.c_str()));
   this->modules_.emplace(device_index, module);
 }
