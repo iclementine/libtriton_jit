@@ -10,6 +10,9 @@
 #include <string>
 
 namespace triton_jit {
+
+static StaticInitLogging c10_log_init;
+
 std::string execute_command(std::string_view command) {
   std::array<char, 128> buffer;
   std::string result;

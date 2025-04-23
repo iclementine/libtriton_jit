@@ -2,11 +2,20 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
+
+#include "c10/util/Logging.h"  // use torch's logging
 #include "torch/torch.h"
 
-c10::initLogging();
 namespace triton_jit {
+
+struct StaticInitLogging {
+  StaticInitLogging() {
+    c10::initLogging();
+  }
+};
+
 std::string execute_command(std::string_view command);
 
 constexpr const char *to_triton_typename(c10::ScalarType t) {
@@ -61,6 +70,7 @@ DEFINE_TRITON_TYPE(int64_t, "i64");
 DEFINE_TRITON_TYPE(float, "fp32");
 DEFINE_TRITON_TYPE(double, "fp64");
 DEFINE_TRITON_TYPE(std::nullptr_t, "*i8");
+DEFINE_TRITON_TYPE(std::nullopt_t, "*i8");
 
 #undef DEFINE_TRITON_TYPE
 
