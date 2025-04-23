@@ -34,7 +34,7 @@ const char *get_python_executable() {
     std::string python_exe;
     const char *python_env = std::getenv("PYTHON_EXECUTABLE");
     python_exe = python_env ? std::string(python_env) : execute_command("which python");
-    LOG(INFO) << "python executable: " << python_exe << std::endl;
+    LOG(INFO) << "python executable: " << python_exe;
     if (python_exe.empty()) {
       throw std::runtime_error("cannot find python executable!");
     }

@@ -5,6 +5,7 @@
 #include <string>
 #include "torch/torch.h"
 
+c10::initLogging();
 namespace triton_jit {
 std::string execute_command(std::string_view command);
 

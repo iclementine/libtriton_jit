@@ -17,10 +17,10 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
     : file_path_(std::string(path)), function_name_(std::string(name)) {
   std::string cmd =
       fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
-  LOG(INFO) << "(Extracting Static Signature) Command: " << cmd << std::endl;
+  LOG(INFO) << "(Extracting Static Signature) Command: " << cmd;
   using json = nlohmann::json;
   std::string signature = execute_command(cmd);
-  LOG(INFO) << "Output: " << signature << std::endl;
+  LOG(INFO) << "Output: " << signature;
 
   json j = json::parse(std::stringstream(signature));
   std::vector<int> arg_types_raw = j.get<std::vector<int>>();
@@ -30,7 +30,7 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
   });
   int num_args = arg_types.size();
   this->static_sig_ = StaticSignature {num_args, arg_types};
-  LOG(INFO) << j.dump() << std::endl;
+  LOG(INFO) << j.dump();
 }
 
 const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
@@ -55,9 +55,9 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
         num_stages,
         device_index,
         this->file_path_);
-    LOG(INFO) << "(JIT compiling) Command: " << cmd << std::endl;
+    LOG(INFO) << "(JIT compiling) Command: " << cmd;
     std::string hash = execute_command(cmd);
-    LOG(INFO) << "Output: " << hash << std::endl;
+    LOG(INFO) << "Output: " << hash;
 
     std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);
