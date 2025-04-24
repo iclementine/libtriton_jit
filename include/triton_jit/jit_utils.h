@@ -6,7 +6,6 @@
 #include <string>
 
 #include "c10/util/Logging.h"  // use torch's logging
-#include "pybind11/embed.h"
 #include "torch/torch.h"
 namespace triton_jit {
 
@@ -14,6 +13,7 @@ struct LibraryInit {
   LibraryInit();
 };
 
+void ensure_python_initialized();
 std::string execute_command(std::string_view command);
 
 constexpr const char *to_triton_typename(c10::ScalarType t) {

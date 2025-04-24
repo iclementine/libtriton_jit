@@ -53,6 +53,15 @@ def ty_to_cpp(ty):
     }[ty]
 
 
+def parse_bool(s: str) -> bool:
+    if s.lower() == "true":
+        return True
+    elif s.lower() == "false":
+        return False
+    else:
+        raise ValueError(f"{s} is not a boolean")
+
+
 # compiler/code_generator.py
 def kernel_suffix(signature, specialization):
     # suffix format:
@@ -67,7 +76,7 @@ def kernel_suffix(signature, specialization):
     return suffix
 
 
-def compile_a_kernel(
+def _compile_a_kernel(
     fn: triton.runtime.JITFunction,
     signature: str,
     num_warps: int = 4,
@@ -80,14 +89,6 @@ def compile_a_kernel(
     # for bool use i1, for boolean values, use 0 or 1.
     # split it
     signature: List[str] = list(map(lambda s: s.strip(" "), signature.split(",")))
-
-    def parse_bool(s: str) -> bool:
-        if s.lower() == "true":
-            return True
-        elif s.lower() == "false":
-            return False
-        else:
-            raise ValueError(f"{s} is not a boolean")
 
     def constexpr(s: str) -> Union[int, float]:
         """Extract constexpr from signature"""
@@ -152,7 +153,29 @@ def compile_a_kernel(
         ccinfo: triton.compiler.CompiledKernel = triton.compile(
             src, target, options=opts
         )
-    return ccinfo.name, ccinfo.hash
+    return ccinfo.hash
+
+
+def compile_a_kernel(
+    source_path,
+    fn_name,
+    signature: str,
+    num_warps: int = 4,
+    num_stages: int = 3,
+    device_id: int = 0,
+):
+    # get jit function
+    source_path = Path(source_path)
+    spec = importlib.util.spec_from_file_location(source_path.stem, source_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    fn = getattr(mod, fn_name)
+
+    # unwrap JITFunction from Autotuner or Heuristics, contarct: decorated fn is stored in the fn attribute
+    while not (type(fn) is triton.runtime.JITFunction):
+        fn = fn.fn
+
+    return _compile_a_kernel(fn, signature, num_warps, num_stages, device_id)
 
 
 if __name__ == "__main__":
@@ -199,11 +222,7 @@ if __name__ == "__main__":
 
     # execute python sources and extract functions wrapped in JITFunction
     arg_path = Path(args.path).expanduser()
-
-    spec = importlib.util.spec_from_file_location(arg_path.stem, arg_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    jitfn: triton.JITFunction = getattr(mod, args.kernel_name)
-
-    kernel = compile_a_kernel(jitfn, args.signature, args.num_warps, args.num_stages)
-    print(kernel[1])
+    kerel_hash = compile_a_kernel(
+        arg_path, args.kernel_name, args.signature, args.num_warps, args.num_stages
+    )
+    print(kerel_hash)

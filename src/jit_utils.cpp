@@ -8,11 +8,22 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include "pybind11/embed.h"
 
 namespace triton_jit {
 
 LibraryInit::LibraryInit() {
   c10::initLogging();
+  ensure_python_initialized();
+}
+
+void ensure_python_initialized() {
+  namespace py = pybind11;
+  static bool initialized = false;
+  if (!initialized && !Py_IsInitialized()) {
+    static py::scoped_interpreter guard {};
+    initialized = true;
+  }
 }
 
 static LibraryInit library_init;
