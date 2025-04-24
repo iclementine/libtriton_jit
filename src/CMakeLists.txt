@@ -11,7 +11,7 @@ target_include_directories(triton_jit
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(triton_jit
-  PUBLIC Torch::Torch CUDA::cuda_driver fmt::fmt-header-only
+  PUBLIC Torch::Torch CUDA::cuda_driver fmt::fmt-header-only pybind11::embed
   PRIVATE nlohmann_json::nlohmann_json)
 
 # --------------------------- alias targets ---------------------------

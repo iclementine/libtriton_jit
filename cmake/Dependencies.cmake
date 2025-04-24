@@ -31,3 +31,17 @@ else()
   # so as to build a shared library that links libfmt.a
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
+
+
+if (USE_EXTERNAL_PYBIND11)
+  execute_process(COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir
+    OUTPUT_VARIABLE pybind11_ROOT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ECHO STDOUT
+    ECHO_OUTPUT_VARIABLE)
+  find_package(pybind11 CONFIG REQUIRED)
+else()
+  FetchContent_Declare(pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11)
+  FetchContent_MakeAvailable(pybind11)
+endif()
