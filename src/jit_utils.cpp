@@ -8,10 +8,25 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include "pybind11/embed.h"
 
 namespace triton_jit {
 
-static StaticInitLogging c10_log_init;
+LibraryInit::LibraryInit() {
+  c10::initLogging();
+  ensure_python_initialized();
+}
+
+void ensure_python_initialized() {
+  namespace py = pybind11;
+  static bool initialized = false;
+  if (!initialized && !Py_IsInitialized()) {
+    static py::scoped_interpreter guard {};
+    initialized = true;
+  }
+}
+
+static LibraryInit library_init;
 
 std::string execute_command(std::string_view command) {
   std::array<char, 128> buffer;
@@ -61,37 +76,29 @@ std::filesystem::path get_path_of_this_library() {
   return cached_path;
 }
 
-const char *get_gen_static_sig_script() {
-  // <install_prefix>/share/flaggems/scripts/gen_ssig.py
-  const static std::filesystem::path script_path = []() {
-    std::filesystem::path installed_script_path = get_path_of_this_library().parent_path().parent_path() /
-                                                  "share" / "triton_jit" / "scripts" / "gen_ssig.py";
-    if (std::filesystem::exists(installed_script_path)) {
-      return installed_script_path;
+std::filesystem::path get_script_dir() {
+  const static std::filesystem::path script_dir = []() {
+    std::filesystem::path installed_script_dir =
+        get_path_of_this_library().parent_path().parent_path() / "share" / "triton_jit" / "scripts";
+    if (std::filesystem::exists(installed_script_dir)) {
+      return installed_script_dir;
     } else {
-      std::filesystem::path source_script_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path() / "scripts" / "gen_ssig.py";
-      return source_script_path;
+      std::filesystem::path source_script_dir =
+          std::filesystem::path(__FILE__).parent_path().parent_path() / "scripts";
+      return source_script_dir;
     }
   }();
-  return script_path.c_str();
+  return script_dir;
+}
+
+const char *get_gen_static_sig_script() {
+  std::filesystem::path script_dir = get_script_dir();
+  return (script_dir / "gen_ssig.py").c_str();
 }
 
 const char *get_standalone_compile_script() {
-  // <install_prefix>/share/flaggems/scripts/standalone_compile.py
-  const static std::filesystem::path script_path = []() {
-    std::filesystem::path installed_script_path = get_path_of_this_library().parent_path().parent_path() /
-                                                  "share" / "triton_jit" / "scripts" /
-                                                  "standalone_compile.py";
-    if (std::filesystem::exists(installed_script_path)) {
-      return installed_script_path;
-    } else {
-      std::filesystem::path source_script_path =
-          std::filesystem::path(__FILE__).parent_path().parent_path() / "scripts" / "standalone_compile.py";
-      return source_script_path;
-    }
-  }();
-  return script_path.c_str();
+  std::filesystem::path script_dir = get_script_dir();
+  return (script_dir / "standalone_compile.py").c_str();
 }
 
 std::filesystem::path get_home_directory() {
