@@ -125,15 +125,39 @@ def _compile_a_kernel(
         assert h in [1, 16], f"Only 1 and 16 are valid hints, got {h}"
     divisible_by_16 = [i for i, h in hints.items() if h == 16]
     equal_to_1 = [i for i, h in hints.items() if h == 1]
-    attrs = triton.compiler.AttrsDescriptor(
-        divisible_by_16=divisible_by_16, equal_to_1=equal_to_1
-    )
+
+    if triton.__version__ == "3.1.0":
+        attrs = triton.compiler.AttrsDescriptor(
+            divisible_by_16=divisible_by_16, equal_to_1=equal_to_1
+        )
+    elif triton.__version__ == "3.2.0":
+        attrs = triton.backends.compiler.AttrsDescriptor.from_dict(
+            {
+                "arg_properties": {
+                    "tt.divisibility": divisible_by_16,
+                    "tt.equal_to": equal_to_1,
+                },
+                "cls": "AttrsDescriptor",
+            }
+        )
+    else:
+        raise RuntimeError(
+            "Triton may change APIs, we cannot ensure compatibility here now."
+        )
 
     # 1 are added into constants
     # we shall also specialize None
     # also the type f None should be *i8
     for i in equal_to_1:
         constants.update({i: 1})
+
+    if triton.__version__ == "3.2.0":
+        arg_names = fn.arg_names
+        _constants = {arg_names[i]: v for i, v in constants.items()}
+        _signature_without_spec = {
+            arg_names[i]: v for i, v in signature_without_spec.items()
+        }
+        constants, signature_without_spec = _constants, _signature_without_spec
 
     # STEP1: JITFunction, constants, signature, specialization
     src = triton.compiler.ASTSource(
@@ -153,6 +177,13 @@ def _compile_a_kernel(
         ccinfo: triton.compiler.CompiledKernel = triton.compile(
             src, target, options=opts
         )
+    # triton 3.2, hash is nologer the subdir name in cachedir, instead the hash of the kernel hash is
+    if triton.__version__ == "3.2.0":
+        from triton.runtime.cache import get_cache_manager
+
+        cache_manager = get_cache_manager(ccinfo.hash)
+        return cache_manager.key
+
     return ccinfo.hash
 
 
