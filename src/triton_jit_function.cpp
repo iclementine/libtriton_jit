@@ -77,26 +77,6 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
     std::string hash = ans.cast<std::string>();
     LOG(INFO) << "Output: " << hash;
 
-    // sys call
-    // std::string cmd = fmt::format(
-    //     "{} {} "
-    //     "--kernel-name {} "
-    //     "--signature {} "
-    //     "--num-warps {} --num-stages {} "
-    //     "--device-id {} "
-    //     "{}",
-    //     get_python_executable(),
-    //     get_standalone_compile_script(),
-    //     this->function_name_,
-    //     signature,
-    //     num_warps,
-    //     num_stages,
-    //     device_index,
-    //     this->file_path_);
-    // LOG(INFO) << "(JIT compiling) Command: " << cmd;
-    // std::string hash = execute_command(cmd);
-    // LOG(INFO) << "Output: " << hash;
-
     std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);
     LOG(INFO) << fmt::format("kernel_dir: {}", kernel_dir);

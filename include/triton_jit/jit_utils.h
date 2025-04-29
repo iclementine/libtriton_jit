@@ -7,7 +7,6 @@
 #include <string>
 
 #include "c10/util/Logging.h"  // use torch's logging
-
 #include "torch/torch.h"
 namespace triton_jit {
 
@@ -73,7 +72,6 @@ template <typename T>
 struct triton_type : triton_type_helper<std::remove_cv_t<std::remove_reference_t<T>>> {};
 
 // path of python executable
-const char *get_python_executable();
 std::filesystem::path get_script_dir();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();

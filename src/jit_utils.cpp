@@ -30,22 +30,6 @@ std::string execute_command(std::string_view command) {
   return result;
 }
 
-const char *get_python_executable() {
-  // TODO: use embedded python interpreter to get the executable path
-  // import sys; sys.executable
-  const static std::string python_executable_path = []() {
-    std::string python_exe;
-    const char *python_env = std::getenv("PYTHON_EXECUTABLE");
-    python_exe = python_env ? std::string(python_env) : execute_command("which python");
-    LOG(INFO) << "python executable: " << python_exe;
-    if (python_exe.empty()) {
-      throw std::runtime_error("cannot find python executable!");
-    }
-    return python_exe;
-  }();
-  return python_executable_path.c_str();
-}
-
 std::filesystem::path get_path_of_this_library() {
   // This function gives the library path of this library as runtime, similar to the $ORIGIN
   // that is used for run path (RPATH), but unfortunately, for custom dependencies (instead of linking)
