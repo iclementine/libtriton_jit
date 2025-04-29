@@ -9,39 +9,26 @@
 #include "c10/util/Logging.h"  // use torch's logging
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
+
 #include "pybind11/embed.h"
 
 namespace triton_jit {
 std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
 
+void ensure_initialized() {
+  // When using libtriton_jit with a python C-extension, it is already initialized
+  c10::initLogging();
+  if (!Py_IsInitialized()) {
+    Py_InitializeEx(false);
+  }
+}
+
 TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view name)
     : file_path_(std::string(path)), function_name_(std::string(name)) {
-  // sys command
-  // std::string cmd =
-  //     fmt::format("{} {} -n {} {}", get_python_executable(), get_gen_static_sig_script(), name, path);
-  // LOG(INFO) << "(Extracting Static Signature) Command: " << cmd;
-  // using json = nlohmann::json;
-  // std::string signature = execute_command(cmd);
-  // LOG(INFO) << "Output: " << signature;
-
-  // json j = json::parse(std::stringstream(signature));
-  // std::vector<int> arg_types_raw = j.get<std::vector<int>>();
-  // std::vector<ArgType> arg_types(arg_types_raw.size());
-  // std::transform(arg_types_raw.begin(), arg_types_raw.end(), arg_types.begin(), [](int tag) {
-  //   return ArgType(tag);
-  // });
-  // int num_args = arg_types.size();
-  // this->static_sig_ = StaticSignature {num_args, arg_types};
-  // LOG(INFO) << arg_types_raw;
-
   // embed python
   namespace py = pybind11;
-  // py::scoped_interpreter guard{};
-
-  auto tstate = PyGILState_Ensure();
-  pybind11::get_shared_data("");  // setup the internals pointer
-  PyGILState_Release(tstate);
-  pybind11::gil_scoped_acquire guard {};
+  ensure_initialized();
+  py::gil_scoped_acquire gil;
 
   std::filesystem::path script_dir = get_script_dir();
   py::module_ sys = py::module_::import("sys");
@@ -73,11 +60,8 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
   if (pos == this->overloads_.end()) {
     // embed python
     namespace py = pybind11;
-    // py::scoped_interpreter guard{};
-    auto tstate = PyGILState_Ensure();
-    pybind11::get_shared_data("");  // setup the internals pointer
-    PyGILState_Release(tstate);
-    pybind11::gil_scoped_acquire guard {};
+    ensure_initialized();
+    py::gil_scoped_acquire gil;
 
     std::filesystem::path script_dir = get_script_dir();
     py::module_ sys = py::module_::import("sys");
@@ -92,26 +76,6 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
     }
     std::string hash = ans.cast<std::string>();
     LOG(INFO) << "Output: " << hash;
-
-    // sys call
-    // std::string cmd = fmt::format(
-    //     "{} {} "
-    //     "--kernel-name {} "
-    //     "--signature {} "
-    //     "--num-warps {} --num-stages {} "
-    //     "--device-id {} "
-    //     "{}",
-    //     get_python_executable(),
-    //     get_standalone_compile_script(),
-    //     this->function_name_,
-    //     signature,
-    //     num_warps,
-    //     num_stages,
-    //     device_index,
-    //     this->file_path_);
-    // LOG(INFO) << "(JIT compiling) Command: " << cmd;
-    // std::string hash = execute_command(cmd);
-    // LOG(INFO) << "Output: " << hash;
 
     std::string kernel_dir = std::string(get_cache_path() / hash);
     TritonKernel kernel(kernel_dir, this->function_name_);

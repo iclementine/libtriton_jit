@@ -1,8 +1,12 @@
 include(FetchContent)
 
 # dependencies: cuda toolkit
-find_package(CUDAToolkit REQUIRED)
+find_package(CUDAToolkit REQUIRED COMPONENTS cuda_driver)
 
+# dependencies: python
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
+
+# dependencies: torch
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 find_package(Torch MODULE REQUIRED) # This is the FindTorch.cmake
 
@@ -37,8 +41,7 @@ if (USE_EXTERNAL_PYBIND11)
   execute_process(COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir
     OUTPUT_VARIABLE pybind11_ROOT
     OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND_ECHO STDOUT
-    ECHO_OUTPUT_VARIABLE)
+  )
   find_package(pybind11 CONFIG REQUIRED)
 else()
   FetchContent_Declare(pybind11

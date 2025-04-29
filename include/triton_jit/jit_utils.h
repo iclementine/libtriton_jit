@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <mutex>
 #include <optional>
 #include <string>
 
@@ -9,11 +10,6 @@
 #include "torch/torch.h"
 namespace triton_jit {
 
-struct LibraryInit {
-  LibraryInit();
-};
-
-void ensure_python_initialized();
 std::string execute_command(std::string_view command);
 
 constexpr const char *to_triton_typename(c10::ScalarType t) {
@@ -76,7 +72,6 @@ template <typename T>
 struct triton_type : triton_type_helper<std::remove_cv_t<std::remove_reference_t<T>>> {};
 
 // path of python executable
-const char *get_python_executable();
 std::filesystem::path get_script_dir();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
