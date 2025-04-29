@@ -8,25 +8,8 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include "pybind11/embed.h"
 
 namespace triton_jit {
-
-LibraryInit::LibraryInit() {
-  c10::initLogging();
-  ensure_python_initialized();
-}
-
-void ensure_python_initialized() {
-  namespace py = pybind11;
-  static bool initialized = false;
-  if (!initialized && !Py_IsInitialized()) {
-    static py::scoped_interpreter guard {};
-    initialized = true;
-  }
-}
-
-static LibraryInit library_init;
 
 std::string execute_command(std::string_view command) {
   std::array<char, 128> buffer;
@@ -48,6 +31,8 @@ std::string execute_command(std::string_view command) {
 }
 
 const char *get_python_executable() {
+  // TODO: use embedded python interpreter to get the executable path
+  // import sys; sys.executable
   const static std::string python_executable_path = []() {
     std::string python_exe;
     const char *python_env = std::getenv("PYTHON_EXECUTABLE");
