@@ -8,8 +8,8 @@
 
 #include "c10/util/Logging.h"  // use torch's logging
 #include "torch/torch.h"
-namespace triton_jit {
 
+namespace triton_jit {
 std::string execute_command(std::string_view command);
 
 constexpr const char *to_triton_typename(c10::ScalarType t) {
