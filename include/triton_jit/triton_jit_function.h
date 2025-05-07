@@ -62,12 +62,12 @@ class TritonJITFunction {
       if constexpr (has_data_ptr<decltype(item)>::value) {
         void *p_item = item.data_ptr();
         data_pointers.push_back(p_item);
-        kernel_args.push_back(&(data_pointers[idx]));
+        kernel_args.push_back(&(data_pointers.back()));
 
         const char *dtype = to_triton_typename(item.scalar_type());
         const char *specialization = "";
         if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {
-          specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers[idx]));
+          specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
@@ -102,6 +102,10 @@ class TritonJITFunction {
       idx++;
     };
     (arg_handle(args), ...);
+    // global scratch: introduced in triton 3.3
+    void *global_scratch = nullptr;
+    data_pointers.push_back(global_scratch);
+    kernel_args.push_back(&(data_pointers.back()));
 
     std::string full_signature;
     for (int i = 0; i < signature.size(); i++) {

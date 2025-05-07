@@ -6,10 +6,12 @@ from typing import List, Tuple, Union
 
 import torch
 import triton
+from packaging.version import Version
 
 # use a separate cache for flaggems triton kernels
 os.environ["TRITON_CACHE_DIR"] = str(Path.home() / ".flaggems" / "triton_cache")
 # pylint: disable-next=wrong-import-position
+triton_version = Version(triton.__version__)
 
 DESC = """
 Script to compile Triton Jit functions into Compiled Kernel and cache it into a cache dir.
@@ -62,6 +64,26 @@ def parse_bool(s: str) -> bool:
         raise ValueError(f"{s} is not a boolean")
 
 
+def constexpr(s: str) -> Union[int, float]:
+    """Extract constexpr from signature"""
+    try:
+        ret = parse_bool(s)
+        return ret
+    except ValueError:
+        pass
+    try:
+        ret = int(s)
+        return ret
+    except ValueError:
+        pass
+    try:
+        ret = float(s)
+        return ret
+    except ValueError:
+        pass
+    return None
+
+
 # compiler/code_generator.py
 def kernel_suffix(signature, specialization):
     # suffix format:
@@ -89,27 +111,9 @@ def _compile_a_kernel(
     # for bool use i1, for boolean values, use 0 or 1.
     # split it
     signature: List[str] = list(map(lambda s: s.strip(" "), signature.split(",")))
+    num_args = len(signature)
 
-    def constexpr(s: str) -> Union[int, float]:
-        """Extract constexpr from signature"""
-        try:
-            ret = parse_bool(s)
-            return ret
-        except ValueError:
-            pass
-        try:
-            ret = int(s)
-            return ret
-        except ValueError:
-            pass
-        try:
-            ret = float(s)
-            return ret
-        except ValueError:
-            pass
-        return None
-
-    # constants
+    # constants: TODO: use that from fn
     constants = {i: constexpr(s) for i, s in enumerate(signature)}
     constants = {k: v for k, v in constants.items() if v is not None}
 
@@ -126,11 +130,11 @@ def _compile_a_kernel(
     divisible_by_16 = [i for i, h in hints.items() if h == 16]
     equal_to_1 = [i for i, h in hints.items() if h == 1]
 
-    if triton.__version__ == "3.1.0":
+    if triton_version == Version("3.1.0"):
         attrs = triton.compiler.AttrsDescriptor(
             divisible_by_16=divisible_by_16, equal_to_1=equal_to_1
         )
-    elif triton.__version__ == "3.2.0":
+    elif triton_version == Version("3.2.0"):
         attrs = triton.backends.compiler.AttrsDescriptor.from_dict(
             {
                 "arg_properties": {
@@ -140,6 +144,8 @@ def _compile_a_kernel(
                 "cls": "AttrsDescriptor",
             }
         )
+    elif triton_version == Version("3.3.0"):
+        attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     else:
         raise RuntimeError(
             "Triton may change APIs, we cannot ensure compatibility here now."
@@ -151,7 +157,14 @@ def _compile_a_kernel(
     for i in equal_to_1:
         constants.update({i: 1})
 
-    if triton.__version__ == "3.2.0":
+    if triton_version == Version("3.1.0"):
+        src = triton.compiler.ASTSource(
+            fn=fn,
+            constants=constants,
+            signature=signature_without_spec,
+            attrs=attrs,
+        )
+    elif triton_version == Version("3.2.0"):
         arg_names = fn.arg_names
         _constants = {arg_names[i]: v for i, v in constants.items()}
         _signature_without_spec = {
@@ -159,13 +172,34 @@ def _compile_a_kernel(
         }
         constants, signature_without_spec = _constants, _signature_without_spec
 
+        src = triton.compiler.ASTSource(
+            fn=fn,
+            constants=constants,
+            signature=signature_without_spec,
+            attrs=attrs,
+        )
+    elif triton_version == Version("3.3.0"):
+        arg_names = fn.arg_names
+        _constants = {(i,): v for i, v in constants.items()}
+        _signature_without_spec = {}
+        for i in range(num_args):
+            if i in signature_without_spec:
+                _signature_without_spec[arg_names[i]] = signature_without_spec[i]
+            elif i in constants:
+                _signature_without_spec[arg_names[i]] = "constexpr"
+            else:
+                raise ValueError("wtf")
+        constants, signature_without_spec = _constants, _signature_without_spec
+
+        src = triton.compiler.ASTSource(
+            fn=fn,
+            signature=signature_without_spec,
+            constexprs=constants,
+            attrs=attrs,
+        )
+
     # STEP1: JITFunction, constants, signature, specialization
-    src = triton.compiler.ASTSource(
-        fn=fn,
-        constants=constants,
-        signature=signature_without_spec,
-        attrs=attrs,
-    )
+
     # STEP2: compile options for the backend
     opts = {"num_warps": num_warps, "num_stages": num_stages}
 
@@ -178,7 +212,7 @@ def _compile_a_kernel(
             src, target, options=opts
         )
     # triton 3.2, hash is nologer the subdir name in cachedir, instead the hash of the kernel hash is
-    if triton.__version__ == "3.2.0":
+    if triton_version >= Version("3.2.0"):
         from triton.runtime.cache import get_cache_manager
 
         cache_manager = get_cache_manager(ccinfo.hash)
