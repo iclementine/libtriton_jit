@@ -38,8 +38,8 @@ def extract_static_signature(source_path, fn_name):
     fn = getattr(mod, fn_name)
 
     # unwrap JITFunction from Autotuner or Heuristics, contarct: decorated fn is stored in the fn attribute
-    # while not (type(fn) is triton.runtime.JITFunction):
-    #     fn = fn.fn
+    while not (type(fn) is triton.runtime.JITFunction):
+        fn = fn.fn
 
     sig = static_signature(fn)
 
