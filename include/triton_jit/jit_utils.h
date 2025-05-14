@@ -10,8 +10,6 @@
 #include "torch/torch.h"
 
 namespace triton_jit {
-std::string execute_command(std::string_view command);
-
 constexpr const char *to_triton_typename(c10::ScalarType t) {
   switch (t) {
     case c10::ScalarType::Float:

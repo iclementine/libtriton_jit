@@ -10,26 +10,6 @@
 #include <string>
 
 namespace triton_jit {
-
-std::string execute_command(std::string_view command) {
-  std::array<char, 128> buffer;
-  std::string result;
-
-  // Open the process and read its output
-  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.data(), "r"), pclose);
-  if (!pipe) {
-    throw std::runtime_error("popen() failed to open pipe for command: " + std::string(command));
-  }
-
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    result += buffer.data();
-  }
-  while (!result.empty() && result.back() == '\n') {
-    result.pop_back();
-  }
-  return result;
-}
-
 std::filesystem::path get_path_of_this_library() {
   // This function gives the library path of this library as runtime, similar to the $ORIGIN
   // that is used for run path (RPATH), but unfortunately, for custom dependencies (instead of linking)
