@@ -47,13 +47,13 @@ class TritonJITFunction {
     // but data pointers are not the arguement of the function operator(), they are local variables
     // that are created in `arg_handle`, to take the addresses of them, we need to keep them alive
     // out of the function
-    std::vector<void *> data_pointers;
+    c10::SmallVector<void *> data_pointers;
     data_pointers.reserve(num_args);
 
-    std::vector<void *> kernel_args;
+    c10::SmallVector<void *> kernel_args;
     kernel_args.reserve(num_args);
 
-    std::vector<std::string> signature;
+    c10::SmallVector<std::string> signature;
     signature.reserve(num_args);
 
     int idx = 0;

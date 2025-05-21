@@ -15,6 +15,9 @@ include(cmake/Options.cmake)
 include(cmake/Dependencies.cmake)
 
 add_subdirectory(src)
+if (${TRITON_JIT_BUILD_EXAMPLES})
+  add_subdirectory(examples)
+endif()
 
 # --------------------------- installtion of cmake package ---------------------------
 include(GNUInstallDirs)
