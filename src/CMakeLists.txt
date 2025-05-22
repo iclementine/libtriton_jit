@@ -20,21 +20,21 @@ target_link_libraries(triton_jit
 add_library(TritonJIT::triton_jit ALIAS triton_jit)
 
 # --------------------------- install ---------------------------
-include(GNUInstallDirs)
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/triton_jit" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(DIRECTORY "${PROJECT_SOURCE_DIR}/scripts"
-  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/triton_jit/" FILES_MATCHING PATTERN "*.py")
-install(
-  TARGETS triton_jit
-  EXPORT TritonJITTargets
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-install(
-  EXPORT TritonJITTargets
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TritonJIT
-  NAMESPACE TritonJIT::
-  FILE TritonJITTargets.cmake
-)
-
-# This is for find_package to work with the build tree, instead of the install tree
-export(EXPORT TritonJITTargets FILE "${PROJECT_BINARY_DIR}/TritonJITTargets.cmake")
+if(TRITON_JIT_INSTALL)
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/triton_jit" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/scripts"
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/triton_jit/" FILES_MATCHING PATTERN "*.py")
+  install(
+    TARGETS triton_jit
+    EXPORT TritonJITTargets
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+  install(
+    EXPORT TritonJITTargets
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TritonJIT
+    NAMESPACE TritonJIT::
+    FILE TritonJITTargets.cmake
+  )
+  # This is for find_package to work with the build tree, instead of the install tree
+  export(EXPORT TritonJITTargets FILE "${PROJECT_BINARY_DIR}/TritonJITTargets.cmake")
+endif()

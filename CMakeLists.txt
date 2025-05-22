@@ -27,7 +27,7 @@ set(CMAKE_INSTALL_RPATH "${_rpath_portable_origin}")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # --------------------------- project-wide settings ---------------------------
-if (${PROJECT_IS_TOP_LEVEL})
+if (PROJECT_IS_TOP_LEVEL)
   message(STATUS "TritonJIT is the top level project")
 endif()
 option(TRITON_JIT_USE_EXTERNAL_JSON "whether to use external json library" OFF)
@@ -61,7 +61,7 @@ else()
 endif()
 
 # dependencies: fmtlib
-if (TRITON_JIT_USE_EXTERNAL_FMTLIB)
+if(TRITON_JIT_USE_EXTERNAL_FMTLIB)
   find_package(fmt VERSION 10.2.1 REQUIRED)
 else()
   FetchContent_Declare(fmt
@@ -73,7 +73,7 @@ else()
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
-if (USE_EXTERNAL_PYBIND11)
+if(TRITON_JIT_USE_EXTERNAL_PYBIND11)
   execute_process(COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir
     OUTPUT_VARIABLE pybind11_ROOT
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -88,12 +88,12 @@ endif()
 
 # --------------------------- subdirectories ---------------------------
 add_subdirectory(src)
-if (${TRITON_JIT_BUILD_EXAMPLES})
+if(TRITON_JIT_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-# --------------------------- installtion of cmake package ---------------------------
-if (${TRITON_JIT_INSTALL})
+# --------------------------- cmake package ---------------------------
+if(TRITON_JIT_INSTALL)
   include(GNUInstallDirs)
   include(CMakePackageConfigHelpers)
   # generate the config file that includes the exports: TritonJITConfig.cmake
@@ -113,7 +113,6 @@ if (${TRITON_JIT_INSTALL})
           ${CMAKE_CURRENT_BINARY_DIR}/TritonJITConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TritonJIT
   )
-
   # install the FindTorch module by us
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindTorch.cmake
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/TritonJIT)
