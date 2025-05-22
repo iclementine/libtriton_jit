@@ -1,5 +1,5 @@
-# libtorch_example
-use libtorch to do interesting things
+# libtriton_jit
+Triton JIT C++ runtime.
 
 This project offer shims to make using Triton lang inside a c++ based project easier. It provides user experience similar to Triton's python interface. You can define Jit functions in python and run them in c++ code. It aims to reduce the inevitable python overhead when use triton in python code. For many kernels, the execution time of the kernel is much shorter that the cpu overhead, which composes of mainly three parts:
 
@@ -24,7 +24,7 @@ Then the arguemnts are used to launch the kernel via a low level driver API. Now
 
 This part is the main facilities for calling jit functions from c++, which can be used to write operators.
 
-### operators
+### examples
 
 Since we are mainly focus on Torch now, operators means some function that 1) handles torch tensors and 2)dynamically dispatch to different backend-specific implementations based on arguments.
 
@@ -32,13 +32,15 @@ An implementation that handles torch tensors can use a lot of APIs provided by l
 
 The the operators can be register into a torch library via `TORCH_LIBRARY` APIs. Then the operators can be used both from c++ and python. You don't even need to explicitly write python bindings for them, since torch already provides a unified(boxed) way to call operators via the dispatcher.
 
+We have examples on pointwise add and reduce sum.
+
 ### tests
 
 This directory includes some code to test the operators. The operators should be tested both from c++ and python to ensure that they work as expected. But now the test is not done.
 
 ## how to build
 
-1. Activate a python virtual environment where torch is installed;
+1. Activate a python virtual environment where torch is installed, since we need it to find the torch and pybind that is installed to this python environment;
 2. Configure & Generate build system: specify which python root to use, we would use the torch installed within it.
   command: `cmake -S . -B build -DPython_ROOT="$(which python)/../.."`
 3. Build: `cmake --build build --parallel`
