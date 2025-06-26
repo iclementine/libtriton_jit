@@ -57,7 +57,6 @@ class TritonJITFunction {
     signature.reserve(num_args);
 
     int idx = 0;
-
     auto arg_handle = [&](const auto &item) {
       if constexpr (has_data_ptr<decltype(item)>::value) {
         void *p_item = item.data_ptr();
@@ -71,7 +70,8 @@ class TritonJITFunction {
         }
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
-      } else if constexpr (std::is_same_v<decltype(item), std::nullopt_t>) {
+      } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
+                                          std::nullopt_t>) {
         signature.push_back("*i8");
       } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
         signature.push_back(fmt::format("{}", item));
@@ -99,9 +99,22 @@ class TritonJITFunction {
         const char *dtype = triton_type<decltype(item)>::name;
         signature.push_back(dtype);
       }
+    };
+
+    auto arg_handle_opt = [&](const auto &item) {
+      if constexpr (is_optional<decltype(item)>::value) {
+        if (item.has_value()) {
+          arg_handle(item.value());
+        } else {
+          arg_handle(std::nullopt);
+        }
+
+      } else {
+        arg_handle(item);
+      }
       idx++;
     };
-    (arg_handle(args), ...);
+    (arg_handle_opt(args), ...);
     // global scratch: introduced in triton 3.3
     void *global_scratch = nullptr;
     data_pointers.push_back(global_scratch);
