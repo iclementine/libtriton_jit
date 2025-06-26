@@ -51,7 +51,7 @@ template <typename T>
 struct is_optional_helper : public std::false_type {};
 
 template <typename T>
-struct is_optional_helper<std::vector<T>> : public std::true_type {};
+struct is_optional_helper<std::optional<T>> : public std::true_type {};
 
 template <typename T>
 struct is_optional : public is_optional_helper<std::remove_const_t<std::remove_reference_t<T>>> {};
