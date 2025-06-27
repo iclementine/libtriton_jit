@@ -71,8 +71,11 @@ class TritonJITFunction {
         std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
         signature.push_back(sig_for_idx);
       } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
-                                          std::nullopt_t>) {
+                                          std::nullptr_t>) {
         signature.push_back("*i8");
+      } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
+                                          std::nullopt_t>) {
+        signature.push_back("nullopt");
       } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
         signature.push_back(fmt::format("{}", item));
       } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
@@ -104,21 +107,30 @@ class TritonJITFunction {
     auto arg_handle_opt = [&](const auto &item) {
       if constexpr (is_optional<decltype(item)>::value) {
         if (item.has_value()) {
-          arg_handle(item.value());
+          const auto &v = item.value();
+          arg_handle(v);
         } else {
           arg_handle(std::nullopt);
         }
-
       } else {
         arg_handle(item);
       }
       idx++;
     };
     (arg_handle_opt(args), ...);
+
     // global scratch: introduced in triton 3.3
     void *global_scratch = nullptr;
     data_pointers.push_back(global_scratch);
     kernel_args.push_back(&(data_pointers.back()));
+
+    std::cout << "======== start ========" << std::endl;
+    std::cout << "KERNEL_NAME: " << this->function_name_ << std::endl;
+    int j = 0;
+    for (const auto __t : kernel_args) {
+      std::cout << "ARG " << j << ": " << __t << std::endl;
+      j++;
+    }
 
     std::string full_signature;
     for (int i = 0; i < signature.size(); i++) {

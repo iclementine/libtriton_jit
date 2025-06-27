@@ -66,6 +66,8 @@ def parse_bool(s: str) -> bool:
 
 def constexpr(s: str) -> Union[int, float]:
     """Extract constexpr from signature"""
+    if s == "nullopt":
+        return None
     try:
         ret = parse_bool(s)
         return ret
@@ -106,16 +108,32 @@ def _compile_a_kernel(
     device_id: int = 0,
 ) -> Tuple[str, str]:
     """compile a kernel."""
+    # static signature
+    constexpr_indices = [i for (i, p) in enumerate(fn.params) if p.is_constexpr]
+    # non_constexpr_indices = [i for (i, p) in enumerate(fn.params) if not p.is_constexpr]
+    # specialised_indices = [
+    #     i
+    #     for (i, p) in enumerate(fn.params)
+    #     if (not p.do_not_specialize) and (not p.is_constexpr)
+    # ]
+
     # validate and parse signature
     # example "*fp32, *fp32:16, i32, 1024"
     # for bool use i1, for boolean values, use 0 or 1.
     # split it
+
     signature: List[str] = list(map(lambda s: s.strip(" "), signature.split(",")))
     num_args = len(signature)
+    assert num_args == len(
+        fn.params
+    ), f"number of argument mismatch:  Actual({num_args}), Function Definition({len(fn.params)})"
 
-    # constants: TODO: use that from fn
-    constants = {i: constexpr(s) for i, s in enumerate(signature)}
-    constants = {k: v for k, v in constants.items() if v is not None}
+    constants = {
+        i: constexpr(s) for i, s in enumerate(signature) if i in constexpr_indices
+    }
+    assert len(constants) == len(
+        constexpr_indices
+    ), f"number of constexpr mismatch:  Actual({len(constants)}), Function Definition({len(constexpr_indices)})"
 
     # signature, no specializations here
     signature_without_spec = {
@@ -151,11 +169,14 @@ def _compile_a_kernel(
             "Triton may change APIs, we cannot ensure compatibility here now."
         )
 
-    # 1 are added into constants
-    # we shall also specialize None
-    # also the type f None should be *i8
+    # integer 1 in value, but the corresponding ArgType in static signature is not constexpr are added into constants
     for i in equal_to_1:
         constants.update({i: 1})
+        # Nones in value, but the corresponding ArgType in static signature is not constexpr are added into constants
+    for i, v in signature_without_spec.items():
+        if v == "nullopt":
+            constants[i] = None
+            signature_without_spec[i] = "constexpr"
 
     if triton_version == Version("3.1.0"):
         src = triton.compiler.ASTSource(
