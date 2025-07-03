@@ -56,17 +56,17 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_stages,
                                                   CUdevice device_index) const {
   std::string signature(_signature);
-  std::cout << "Standalone script to debug: \n"
-            << fmt::format(
-                   "python standalone_compile.py {} -n {} --device-id {} --num-warps {} --num-stages {} "
-                   "--signature {}",
-                   this->file_path_,
-                   this->function_name_,
-                   device_index,
-                   num_warps,
-                   num_stages,
-                   signature)
-            << std::endl;
+  // std::cout << "Standalone script to debug: \n"
+  //           << fmt::format(
+  //                  "python standalone_compile.py {} -n {} --device-id {} --num-warps {} --num-stages {} "
+  //                  "--signature {}",
+  //                  this->file_path_,
+  //                  this->function_name_,
+  //                  device_index,
+  //                  num_warps,
+  //                  num_stages,
+  //                  signature)
+  //           << std::endl;
   auto pos = this->overloads_.find(signature);
   if (pos == this->overloads_.end()) {
     // embed python

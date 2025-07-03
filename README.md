@@ -101,3 +101,7 @@ TritonJIT provides cmake packages, so it can be used with cmake. It can be used 
 
 1. use the installed package, via `find_package`.
 2. add the project as a sub-project, via `FetchContent`, `ExternProjectAdd` or `add_subdirectory`.
+
+
+## Debug
+Enable debug LOGGING

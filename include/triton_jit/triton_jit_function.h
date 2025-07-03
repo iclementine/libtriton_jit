@@ -14,25 +14,44 @@
 
 namespace triton_jit {
 
+/// @brief An enum to describe how an argument is handled by the runtime.
 enum struct ArgType : int8_t {
-  NON_CONSTEXPR = 0,
-  SPECIALIZED = 1,
-  CONSTEXPR = 2,
+  NON_CONSTEXPR = 0,  // non-constexpr argument that is not specialized
+  SPECIALIZED = 1,    // non-constexpr argument that is not specialized
+  CONSTEXPR = 2,      // constexpr argument(argument to the compiler instead of the kernel)
 };
 
+/// @brief Description of a triton jit function on how it handles its arguments
 struct StaticSignature {
   int num_args;
   std::vector<ArgType> arg_type;
 };
 
+/// @brief An adaptor class to allow using triton jit function in c++.
 class TritonJITFunction {
  private:
   std::string file_path_;
   std::string function_name_;
   StaticSignature static_sig_;
+  // TODO: use shared_mutex to make it thread-safe and optimize to concurrent read
   mutable std::unordered_map<std::string, TritonKernel> overloads_;
 
  public:
+  /// @brief
+  /// @param path
+  /// @param name
+  /// @return
+  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+
+  /// @brief Call a TritonJITFunction.
+  /// @tparam ...Args
+  /// @param stream CUstream on which to launch the kernel
+  /// @param grid_x
+  /// @param grid_y
+  /// @param grid_z
+  /// @param num_warps
+  /// @param num_stages
+  /// @param ...args Arguments to the TritonJITFunction
   template <typename... Args>
   void operator()(CUstream stream,
                   unsigned int grid_x,
@@ -40,120 +59,7 @@ class TritonJITFunction {
                   unsigned int grid_z,
                   unsigned int num_warps,
                   unsigned int num_stages,
-                  Args... args) const {
-    const int num_args = this->static_sig_.num_args;
-
-    // since we need to take address of all the arguemnts to the kernel to launch a kernel
-    // but data pointers are not the arguement of the function operator(), they are local variables
-    // that are created in `arg_handle`, to take the addresses of them, we need to keep them alive
-    // out of the function
-    c10::SmallVector<void *> data_pointers;
-    data_pointers.reserve(num_args);
-
-    c10::SmallVector<void *> kernel_args;
-    kernel_args.reserve(num_args);
-
-    c10::SmallVector<std::string> signature;
-    signature.reserve(num_args);
-
-    int idx = 0;
-    auto arg_handle = [&](const auto &item) {
-      if constexpr (has_data_ptr<decltype(item)>::value) {
-        void *p_item = item.data_ptr();
-        data_pointers.push_back(p_item);
-        kernel_args.push_back(&(data_pointers.back()));
-
-        const char *dtype = to_triton_typename(item.scalar_type());
-        const char *specialization = "";
-        if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {
-          specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
-        }
-        std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
-        signature.push_back(sig_for_idx);
-      } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
-                                          std::nullptr_t>) {
-        signature.push_back("*i8");
-      } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
-                                          std::nullopt_t>) {
-        signature.push_back("nullopt");
-      } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
-        signature.push_back(fmt::format("{}", item));
-      } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
-        const char *dtype = triton_type<decltype(item)>::name;
-        if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
-          const char *specialization = spec(item);
-          if (specialization != ":1") {
-            const void *p_item = &item;
-            // cuLaunchKernel requires `void*`, so if the argument is const,
-            // we need to const_cast to remove the const qualifier to call it
-            kernel_args.push_back(const_cast<void *>(p_item));
-          }
-          std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
-          signature.push_back(sig_for_idx);
-        } else {
-          const void *p_item = &item;
-          kernel_args.push_back(const_cast<void *>(p_item));
-          std::string sig_for_idx = fmt::format("{}", dtype);
-          signature.push_back(sig_for_idx);
-        }
-      } else {  // ArgType::NON_SPECIALIZED
-        const void *p_item = &item;
-        kernel_args.push_back(const_cast<void *>(p_item));
-        const char *dtype = triton_type<decltype(item)>::name;
-        signature.push_back(dtype);
-      }
-    };
-
-    auto arg_handle_opt = [&](const auto &item) {
-      if constexpr (is_optional<decltype(item)>::value) {
-        if (item.has_value()) {
-          const auto &v = item.value();
-          arg_handle(v);
-        } else {
-          arg_handle(std::nullopt);
-        }
-      } else {
-        arg_handle(item);
-      }
-      idx++;
-    };
-    (arg_handle_opt(args), ...);
-
-    // global scratch: introduced in triton 3.3
-    void *global_scratch = nullptr;
-    data_pointers.push_back(global_scratch);
-    kernel_args.push_back(&(data_pointers.back()));
-
-    std::cout << "======== start ========" << std::endl;
-    std::cout << "KERNEL_NAME: " << this->function_name_ << std::endl;
-    int j = 0;
-    for (const auto __t : kernel_args) {
-      std::cout << "ARG " << j << ": " << __t << std::endl;
-      j++;
-    }
-
-    std::string full_signature;
-    for (int i = 0; i < signature.size(); i++) {
-      if (i == 0) {
-        full_signature += signature[i];
-      } else {
-        full_signature += ",";
-        full_signature += signature[i];
-      }
-    }
-
-    // TODO: device or compute capability to compile
-    CUcontext ctx;
-    checkCudaErrors(cuStreamGetCtx(stream, &ctx));
-    checkCudaErrors(cuCtxSetCurrent(ctx));  // redundant?
-    CUdevice d;
-    // device management is done with torch, assume one CUcontext per device                         // int
-    checkCudaErrors(cuCtxGetDevice(&d));
-
-    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
-    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
-    return;
-  }
+                  Args... args) const;
 
  private:
   const TritonKernel &get_kernel(std::string_view signature,
@@ -162,11 +68,131 @@ class TritonJITFunction {
                                  CUdevice device_index) const;
 
  public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
-
  private:
   static std::unordered_map<std::string, TritonJITFunction> functions_;
   TritonJITFunction(std::string_view path, std::string_view name);
 };
+
+template <typename... Args>
+void TritonJITFunction::operator()(CUstream stream,
+                                   unsigned int grid_x,
+                                   unsigned int grid_y,
+                                   unsigned int grid_z,
+                                   unsigned int num_warps,
+                                   unsigned int num_stages,
+                                   Args... args) const {
+  const int num_args = this->static_sig_.num_args;
+
+  // since we need to take address of all the arguemnts to the kernel to launch a kernel
+  // but data pointers are not the arguement of the function operator(), they are local variables
+  // that are created in `arg_handle`, to take the addresses of them, we need to keep them alive
+  // out of the function
+  c10::SmallVector<void *> data_pointers;
+  data_pointers.reserve(num_args);
+
+  c10::SmallVector<void *> kernel_args;
+  kernel_args.reserve(num_args);
+
+  c10::SmallVector<std::string> signature;
+  signature.reserve(num_args);
+
+  int idx = 0;
+  auto arg_handle = [&](const auto &item) {
+    if constexpr (has_data_ptr<decltype(item)>::value) {
+      void *p_item = item.data_ptr();
+      data_pointers.push_back(p_item);
+      kernel_args.push_back(&(data_pointers.back()));
+
+      const char *dtype = to_triton_typename(item.scalar_type());
+      const char *specialization = "";
+      if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {
+        specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
+      }
+      std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
+      signature.push_back(sig_for_idx);
+    } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
+                                        std::nullptr_t>) {
+      signature.push_back("*i8");
+    } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
+                                        std::nullopt_t>) {
+      signature.push_back("nullopt");
+    } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
+      signature.push_back(fmt::format("{}", item));
+    } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
+      const char *dtype = triton_type<decltype(item)>::name;
+      if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
+        const char *specialization = spec(item);
+        if (specialization != ":1") {
+          const void *p_item = &item;
+          // cuLaunchKernel requires `void*`, so if the argument is const,
+          // we need to const_cast to remove the const qualifier to call it
+          kernel_args.push_back(const_cast<void *>(p_item));
+        }
+        std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
+        signature.push_back(sig_for_idx);
+      } else {
+        const void *p_item = &item;
+        kernel_args.push_back(const_cast<void *>(p_item));
+        std::string sig_for_idx = fmt::format("{}", dtype);
+        signature.push_back(sig_for_idx);
+      }
+    } else {  // ArgType::NON_SPECIALIZED
+      const void *p_item = &item;
+      kernel_args.push_back(const_cast<void *>(p_item));
+      const char *dtype = triton_type<decltype(item)>::name;
+      signature.push_back(dtype);
+    }
+  };
+
+  auto arg_handle_opt = [&](const auto &item) {
+    if constexpr (is_optional<decltype(item)>::value) {
+      if (item.has_value()) {
+        const auto &v = item.value();
+        arg_handle(v);
+      } else {
+        arg_handle(std::nullopt);
+      }
+    } else {
+      arg_handle(item);
+    }
+    idx++;
+  };
+  (arg_handle_opt(args), ...);
+
+  // global scratch: introduced in triton 3.3
+  void *global_scratch = nullptr;
+  data_pointers.push_back(global_scratch);
+  kernel_args.push_back(&(data_pointers.back()));
+
+  // std::cout << "======== start ========" << std::endl;
+  // std::cout << "KERNEL_NAME: " << this->function_name_ << std::endl;
+  // int j = 0;
+  // for (const auto __t : kernel_args) {
+  //   std::cout << "ARG " << j << ": " << __t << std::endl;
+  //   j++;
+  // }
+
+  std::string full_signature;
+  for (int i = 0; i < signature.size(); i++) {
+    if (i == 0) {
+      full_signature += signature[i];
+    } else {
+      full_signature += ",";
+      full_signature += signature[i];
+    }
+  }
+
+  // TODO: use torch backend-agnostic device APIs
+  CUcontext ctx;
+  checkCudaErrors(cuStreamGetCtx(stream, &ctx));
+  checkCudaErrors(cuCtxSetCurrent(ctx));  // redundant?
+  CUdevice d;
+  // device management is done with torch, assume one CUcontext per device                         // int
+  checkCudaErrors(cuCtxGetDevice(&d));
+
+  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
+  return;
+}
 
 }  // namespace triton_jit
