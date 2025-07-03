@@ -89,19 +89,18 @@ def sum_dim(inp, dim=None, keepdim=False, *, dtype=None):
     return out
 
 
-torch_ops_my_ops_sum_dim = torch.library.custom_op(
-    "my_ops::sum_dim",
-    mutates_args=(),
-    device_types="cuda",
-    # the scheme should not include op name
-    schema="(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor",
-)(sum_dim)
-
 if __name__ == "__main__":
+    torch_ops_my_ops_sum_dim = torch.library.custom_op(
+        "my_ops::sum.dim_IntList",
+        mutates_args=(),
+        device_types="cuda",
+        # the scheme should not include op name
+        schema="(Tensor self, int[1]? dim, bool keepdim=False, *, ScalarType? dtype=None) -> Tensor",
+    )(sum_dim)
     x = torch.randn(16, 4 * 1024, device="cuda")
     result1 = sum_dim(x, [1])
     result2 = torch.sum(x, [1])
-    result3 = torch.ops.my_ops.sum_dim(x, [1])
+    result3 = torch.ops.my_ops.sum_dim_IntList(x, [1])
 
     torch.cuda.synchronize()
     for _ in range(10):
@@ -111,5 +110,5 @@ if __name__ == "__main__":
         sum_dim(x, [1])
     torch.cuda.synchronize()
     for _ in range(10):
-        torch.ops.my_ops.sum_dim(x, [1])
+        torch.ops.my_ops.sum_dim_IntList(x, [1])
     torch.cuda.synchronize()

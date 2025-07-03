@@ -29,11 +29,11 @@ def binary_add_tensor(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return out
 
 
-torch_op_my_ops_add_tensor = torch.library.custom_op(
-    "my_ops::add_tensor", binary_add_tensor, mutates_args=(), device_types="cuda"
-)
-
 if __name__ == "__main__":
+    torch_op_my_ops_add_tensor = torch.library.custom_op(
+        "my_ops::add_tensor", binary_add_tensor, mutates_args=(), device_types="cuda"
+    )
+
     N = 128 * 1024
     x = torch.randn(N, device="cuda")
     y = torch.randn(N, device="cuda")
