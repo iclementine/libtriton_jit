@@ -12,13 +12,11 @@ It aims to reduce the inevitable Python overhead when using Triton in Python cod
 
 Also, since the wrapper is registered to the torch dispatcher for PyTorch-2-compliance. Torch dispatcher adds extra overhead to the wrapper. Our experiments show that the extra overhead for C++ wrappers is much lighter than for Python wrappers. Since `libtriton_jit` makes it possible to provide C++ wrapper with triton jit functions, we can reduce this extra overhead, too.
 
-
-
 ## Overview of Triton JIT C++ Runtime
 
 The most user-facing part of this project is a C++ class `TritonJitFunction`, which stands for a triton jit function defined in some python script. It jit-compiles the jit function to multiple kernels and caches them in a per `TritonJitFunction` fashion(a in-memeory cache for the runtime). The compilation is delegated to  `triton.compile`. The cache of compiled kernels for all triton jit functions are managed by triton's `CacheManager`(a persistent cahce for the compiler).
 
-<img title="" src="file:///Users/clementine/projects/FlagGems/docs/assets/df524f8faa7bf98b1caa8a6801edb0ccab5a7f45.png" alt="overview" width="505">
+![overview](./assets/libtriton_jit.png)
 
 The JIT compilation system consists of two components, namely, the JIT runtime and the Compiler.  The JIT runtime which specializes a jit function, invokes the compilation and run the compiled kernel; and the Compiler that compiles the specified kernel and return the compiled kernel to the runtime. We reimplement the JIT runtime in C++ while reusing the existing triton compiler.
 
@@ -112,7 +110,7 @@ The operators can be registered in a Torch library via the `TORCH_LIBRARY` macro
 
 We have examples of pointwise addition and summation.
 
----
+
 
 ## How to build
 
@@ -157,16 +155,12 @@ cmake --install build/
 
 If you are not intended to use it in other projects via `find_package`, this step can be omitted.
 
-
-
 ### How to use it in a c++ project
 
 TritonJIT provides cmake packages, so it can be used with cmake. It can be used in 2 ways.
 
 1. use the installed package, via `find_package`.
 2. add the project as a sub-project, via `FetchContent`, `ExternProjectAdd` or `add_subdirectory`.
-
-
 
 ### Debug
 
