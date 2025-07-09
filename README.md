@@ -2,75 +2,71 @@
 
 ## Introduction
 
-The project `libtriton_jit` is an implementation of Triton runtime in C++. It offers shims to make it easier to use Triton lang inside a C++ based project. The user experience is similar to Triton's native Python runtime. You can define Jit functions in Python scripts and run them in c++ code. 
+The project `libtriton_jit` is an implementation of Triton runtime in C++. It offers shims to make it easier to use Triton Lang inside a C++-based project. The user experience is similar to Triton's native Python runtime. You can define Jit functions in Python scripts and run them in c++ code. 
 
-It aims to reduce the inevitable python overhead when use Triton in Python code. For many kernels, the execution time of the kernel is much shorter that the cpu overhead. Assume that we define a function(the wrapper) to compute torch tensors, which invokes some triton jit functions. The cpu overhead comes from mainly three parts:
+It aims to reduce the inevitable Python overhead when using Triton in Python code. For many kernels, the execution time of the kernel is much shorter than the CPU overhead. Assume that we define a function(the wrapper) to compute torch tensors, which invokes some triton jit functions. The CPU overhead comes mainly from three parts:
 
 - wrapper overhead(mainly tensor metadata computation and argument preprocessing);
 - jit overhead(extracting information from arguments to get the kernel, including type and specialization of arguments and value of constexpr arguments);
 - kernel launch overhead(in cuda, cuLaunchKernel introduces about 6us per kernel launch);
 
-Also, since the wrapper is registered to torch dispatcher for pytorch2 compliance. Torch dispatcher adds extra overhead to the wrapper. As our experiments show, the extra overhead for C++ wrappers is much lighter than Python wrappers. Since `libtriton_jit` makes it possible to provide C++ wrapper with triton jit functions, we can reduce this extra overhead, too.
+Also, since the wrapper is registered to the torch dispatcher for PyTorch-2-compliance. Torch dispatcher adds extra overhead to the wrapper. Our experiments show that the extra overhead for C++ wrappers is much lighter than for Python wrappers. Since `libtriton_jit` makes it possible to provide C++ wrapper with triton jit functions, we can reduce this extra overhead, too.
 
 
 
 ## Overview of Triton JIT C++ Runtime
 
-The most user-facing part of this project is a C++ class `TritonJitFunction`, which stands for a triton jit function defined in some python script. It jit-compiles the jit function to multiple kernels and caches them in a per `TritonJitFunction` fashion(a in-memeory cache for the runtime). And the compilation is delegated to  `triton.compile`. The cache of compiled kernels for all triton jit functions are managed by triton's `CacheManager`(a persistent cahce for the compiler).
+The most user-facing part of this project is a C++ class `TritonJitFunction`, which stands for a triton jit function defined in some python script. It jit-compiles the jit function to multiple kernels and caches them in a per `TritonJitFunction` fashion(a in-memeory cache for the runtime). The compilation is delegated to  `triton.compile`. The cache of compiled kernels for all triton jit functions are managed by triton's `CacheManager`(a persistent cahce for the compiler).
 
 <img title="" src="file:///Users/clementine/projects/FlagGems/docs/assets/df524f8faa7bf98b1caa8a6801edb0ccab5a7f45.png" alt="overview" width="505">
 
-The jit-compilation system can be split into two components, namely  the JIT runtime which specializes a jit function, invokes the compilation and run the compiled kernel; and the Compiler that compiles the specified kernel and return the compiled kernel to the runtime. We reimplement the JIT runtime in C++ while reusing the existing triton compiler.
+The JIT compilation system consists of two components, namely, the JIT runtime and the Compiler.  The JIT runtime which specializes a jit function, invokes the compilation and run the compiled kernel; and the Compiler that compiles the specified kernel and return the compiled kernel to the runtime. We reimplement the JIT runtime in C++ while reusing the existing triton compiler.
 
 ### Specify the JIT Function
 
-In Triton's original JIT runtime in python, the `__call__` method of JITFunction inspect each arguments passed to the JITFunction and extract information from it. It involes 3 cases:
+In Triton's original JIT runtime in Python, the `__call__` method of JITFunction inspects each argument passed to the JITFunction and extracts information from it. It includes 3 cases:
 
-- For parameters not annotated with `tl.constexpr` type hint,  extract its type, or data type if it has a `data_ptr` method(intended for torch Tensors).
+- For parameters not annotated with `tl.constexpr` type hint,  it extracts its type, or data type if it has a `data_ptr` method(intended for torch Tensors).
 
-- For parameters not annotated with `tl.constexpr`, if it is not marked as `do_not_specialzie`, extracts features of some arguemnts. It involves whether integers or data pointers equals 1 or is divisible by 16. The features to extract can be customized by backends.
+- For parameters not annotated with `tl.constexpr`, if it is not marked as `do_not_specialize`, it extracts features of some arguments. The features include boolean flags indicating whether an integer or a data pointer equals 1 or is divisible by 16. The features to extract can also be customized by backends.
 
 - For parameters annotated with `tl.constexpr`, the actual value is extracted. Those parameters are for the compiled rather than the compiled kernel.
 
-While it is easy to inspect the type of arguments in python, it is not that straight forward in C++, since type and object(instance) are different things in C++ while in python, a type is also an object. As a result, manipulation of types in C++ is in compile time, which mainly involes templates or template meta programming.
+While it is easy to inspect the type of arguments in Python, it is not that straightforward in C++, since type and object(instance) are different things in C++, while in Python, a type is also an object. As a result, manipulation of types in C++ is at compile time, which mainly involves templates or template meta programming.
 
-Before we start explaining the details, we coin a concept StaticSignature for a JITFunction. It is the part of logic about how to process its arguments that is only related to the function itself withoug knowing the actual passed in arguments. Its representation is `tl.constexpr` type annotation and `do_not_specialize` argument to the `triton.jit` decorator, which describe how to route the parameters, to pass to the compiler, or the compiled kernel, to specialize or not. Note that whether an argument is passed to the kernel depends not only on the static signature, but also the on value of the actual value of the argument for thos parameters that are specified.
+Before we start explaining the details, we coin the concept **StaticSignature** for a JITFunction. It is the part of logic about how to process its arguments that is only related to the function itself, without knowing the actual arguments passed in. Represented as `tl.constexpr` type annotation and `do_not_specialize` argument to the `triton.jit` decorator, it describes how to route the parameters, to pass to the compiler, or the compiled kernel, and whether to specialize the argument or not. Note that whether an argument is passed to the kernel depends not only on the static signature, but also on the actual values of the arguments if they need specialization.
 
-
-
-The C++ class`TritonJitFunction` has a variadic function template `operator()` to specify a jit function at callsites. Since it is a varidic template, it captures the type of all the templated arguments' type at the callsite. The types of arguments, along with the static signature provided by the JitFunction, make up the logic to handle arguments. It then builds a full signature that specifies a kernel, and pick all the arguments for the kernel launch. The logic of inspecting the arguments mentioned above is implemented in C++, which is the core of the Triton JIT C++ runtime.
+The C++ class`TritonJitFunction` has a variadic function template `operator()` to specify a jit function at callsites. Since it is a variadic template, it captures the type of all the templated arguments' type at the callsite. The types of arguments, along with the static signature provided by the JitFunction, make up the logic to handle arguments. It then builds a full signature that specifies a kernel, and picks all the arguments for the kernel launch. The logic of inspecting the arguments mentioned above is implemented in C++, which is the core of the Triton JIT C++ runtime.
 
 In the current implementation, the full signature is represented as a concatenated string with semicolons as separators. Each part corresponds to a parameter of the jit function.
 
-- for constexpr, the format is `{value}`, the value is formated as-is and the type is omitted. Note that boolean values are formatted as  "0" or "1", and None is formated as "nullopt" since the corresponding C++ object of python value `None` is `nullopt`. 
+- For constexpr, the format is `{value}`, the value is formatted as-is, and the type is omitted. Note that boolean values are formatted as  "0" or "1", and None is formatted as "nullopt" since the corresponding C++ object of Python value `None` is `std::nullopt`. 
 
-- for other parameters, the format is `{type}{spec}`.
+- For other parameters, the format is `{type}{spec}`.
   
-  - type: for a C++ type, there is a mapping from it to a string, for example, int64_t is mapped to "i64". For torch Tensors, there is also a mapping from it data type to a string with the same rule. The string is prefixed with a `*`, which means it is a pointer to that type;
+  - type: for a C++ type, there is a mapping from it to a string, for example, int64_t is mapped to "i64". For a torch Tensor, there is also a mapping from its data type to a string with the same rule. The string is prefixed with a `*`, which means it is a pointer to that type;
   
-  - spec: specialization is only for data pointers or integers. It has 3 values, ":16" means divisible by 16, ":1" meas equals 1, and "" means neither.
+  - Spec: specialization is only for data pointers or integers. It has 3 values, ":16" means divisible by 16, ":1" means equals 1, and "" means neither.
 
 ### Invokes the Compilation
 
-Once the full signature is acquired, a standalond python script (`standalone_compile.py`) is excuted to compile a kernel and returns the path of the compiled kernel (see class `TritonKernel` for more details) , which is then loaded into a per `TritonJitFunction` cache.
+Once the full signature is acquired, a standalone Python script (`standalone_compile.py`) is executed to compile a kernel and return the path of the compiled kernel (see class `TritonKernel` for more details), which is then loaded into a per `TritonJitFunction` cache.
 
-Note that the script trys to import the python file in which the triton jit function is defined. So the python file should be able to be imported directly. It must not use relative imports.
-
-
+Note that the script trys to import the Python file in which the triton jit function is defined. So the Python file should be able to be imported directly. It must not use relative imports.
 
 ### Run the Compiled Kernel
 
-Along which the process of composing the full signature, arguments for the kernel launch are also gathered while arguments for the compiled filtered out. Then the arguments for the compiled kernel are used via a low level driver API. Now it supports cuda driver API. The cuda driver API `cuLaunchKernel` erases type of all arguments by taking addresses of all arguments to the kernel via a pointer to void(`void*`). Backends with similar API can adapt the code to launch kernels. But other backends are also considered. For backends without such indirect call API via type erasure, the captured type information from the callsite can be used to redirect the call to the kernel. Hopefully we may see them soon.
+Along with the process of composing the full signature, arguments for the kernel launch are also gathered while arguments for the compiler are filtered out. Then the arguments for the compiled kernel are used via a low-level driver API. Now it supports cuda driver API. The CUDA driver API `cuLaunchKernel` erases the type of all arguments by taking addresses of them via a pointer to void(`void*`). Backends with similar APIs can adapt the code to launch kernels. But other backends are also considered. For backends without such an indirect call API via type erasure, the captured type information from the callsite can be used to redirect the call to the kernel. Hopefully, we may see them soon.
 
 This is the main facilities for calling jit functions from C++, which can be used to write operators.
 
 ## Usage
 
-The basic usage of this library is via `TritonJITFunction`. First get a `TritonJITFunction` via `TritonJITFunction::getInstance(source_path, function_name)`. Then call it.
+The basic usage of this library is via `TritonJITFunction`. First, get a `TritonJITFunction` via `TritonJITFunction::getInstance(source_path, function_name)`. Then call it.
 
-The `operator()` of `TritonJITFunction` is a variadic template. The arguemnts consists of 2 parts.
+The `operator()` of `TritonJITFunction` is a variadic template. The arguments consist of 2 parts.
 
-- The fixed part is basically launch config and compile options for triton jit function.
+- The fixed part is launch config and compile options for triton jit function.
 - The variadic part is the arguments of the triton jit function.
 
 A simple example to add two tensors.
@@ -105,35 +101,35 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
 }
 ```
 
-Since we are mainly focus on Torch now, operators means some functions that
+Since we are mainly focused on Torch now, operators mean some functions that
 
-- handles torch tensors and
-- dynamically dispatch to different backend-specific implementations based on arguments.
+- handles torch tensors;
+- dynamically dispatch to different backend-specific implementations based on the arguments.
 
-They can use a lot of APIs provided by libtorch, including utility functions for meta-data computation and also all other aten operators. But when the focus is to implement operators with triton lang, we mainly use those utility functions for meta-data computation and operators for output allocation and reviewing(viewing a tensor into another with different meta data and leave the underlying storage untouched).
+They can use a lot of APIs provided by libtorch, including utility functions for metadata computation, and also all other ATen operators. But when the focus is on implementing operators with Triton Lang, we mainly use those utility functions for metadata computation and operators for output allocation and reviewing(viewing a tensor into another with different metadata and leaving the underlying storage untouched).
 
-The the operators can be register into a torch library via `TORCH_LIBRARY` APIs. Then the operators can be used both from c++ and python. You don't even need to explicitly write python bindings for them, since torch already provides a unified(boxed) way to call operators via the dispatcher.
+The operators can be registered in a Torch library via the `TORCH_LIBRARY` macro. Then the operators can be used from both C++ and Python. You don't even need to explicitly write Python bindings for them, since torch already provides a unified(boxed) way to call operators via the dispatcher.
 
-We have examples on pointwise add and reduce sum.
+We have examples of pointwise addition and summation.
 
 ---
 
 ## How to build
 
-### Install dependencies.
+### Install dependencies
 
-Though this project is a c++project, it embeds python interpreter to execute some python code, so it has some python dependencies. Also, those python packages is not pure-python, this project also uses their cmake packages, headers and libraries. 
+Though this project is a C++project, it embeds a Python interpreter to execute some Python code, so it has some Python dependencies. Also, those Python packages are not pure Python; this project also uses their CMake packages, headers, and libraries. 
 
-Also, cmake and ninja can be installed from pypi.
+Also, CMake and Ninja can be installed from PyPI.
 
-It is also recommended to install them in a python virtual environment.
+It is also recommended to install them in a Python virtual environment.
 
 ```shell
-# activate the python virtualenv (optional)
+# activate the Python virtualenv (optional)
 pip install torch triton cmake ninja packaging pybind11
 ```
 
-### Configure & Generate build system
+### Configure & Generate the Build System
 
 Remember to specify which python root to use, since the python root is used to find libtorch and pybind11.
 
