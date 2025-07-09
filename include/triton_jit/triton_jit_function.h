@@ -1,3 +1,14 @@
+/**
+ * @file triton_jit_function.h
+ * @author your name (you@domain.com)
+ * @brief TritonJITFunction is a class that wraps triton jit functions so as to be called
+ * in c++ project.
+ * @version 0.1
+ * @date 2025-07-04
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
 #pragma once
 
 #include <cstdint>
@@ -14,20 +25,34 @@
 
 namespace triton_jit {
 
-/// @brief An enum to describe how an argument is handled by the runtime.
+/**
+ * @brief An enum to describe how an argument is handled by the runtime.
+ *
+ */
 enum struct ArgType : int8_t {
   NON_CONSTEXPR = 0,  // non-constexpr argument that is not specialized
-  SPECIALIZED = 1,    // non-constexpr argument that is not specialized
+  SPECIALIZED = 1,    // non-constexpr argument that is specialized
   CONSTEXPR = 2,      // constexpr argument(argument to the compiler instead of the kernel)
 };
 
-/// @brief Description of a triton jit function on how it handles its arguments
+/**
+ * @brief Description of a triton jit function on how it handles its arguments
+ *
+ * StaticSignature is dependent only on the function definition (and the triton.jit
+ * decorator) itself without passing actual arguments. This is what the 'static' here
+ * means
+ */
 struct StaticSignature {
   int num_args;
   std::vector<ArgType> arg_type;
 };
 
-/// @brief An adaptor class to allow using triton jit function in c++.
+/**
+ * @brief An class to wrap triton jit function for it to be called in c++.
+ *
+ * Wrap a triton jit function given the path in which it is defined and the function
+ * name, then you can call it in c++ in almost the same way as in python.
+ */
 class TritonJITFunction {
  private:
   std::string file_path_;
@@ -36,22 +61,11 @@ class TritonJITFunction {
   // TODO: use shared_mutex to make it thread-safe and optimize to concurrent read
   mutable std::unordered_map<std::string, TritonKernel> overloads_;
 
+  static std::unordered_map<std::string, TritonJITFunction> functions_;
+
  public:
-  /// @brief
-  /// @param path
-  /// @param name
-  /// @return
   static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
 
-  /// @brief Call a TritonJITFunction.
-  /// @tparam ...Args
-  /// @param stream CUstream on which to launch the kernel
-  /// @param grid_x
-  /// @param grid_y
-  /// @param grid_z
-  /// @param num_warps
-  /// @param num_stages
-  /// @param ...args Arguments to the TritonJITFunction
   template <typename... Args>
   void operator()(CUstream stream,
                   unsigned int grid_x,
@@ -67,9 +81,6 @@ class TritonJITFunction {
                                  int num_stages,
                                  CUdevice device_index) const;
 
- public:
- private:
-  static std::unordered_map<std::string, TritonJITFunction> functions_;
   TritonJITFunction(std::string_view path, std::string_view name);
 };
 

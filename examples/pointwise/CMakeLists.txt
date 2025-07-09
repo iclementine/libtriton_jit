@@ -7,7 +7,8 @@ add_custom_target(
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_CURRENT_SOURCE_DIR}/add_triton_cpp_rt.py
             ${CMAKE_CURRENT_BINARY_DIR}/add_triton_cpp_rt.py
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/add_triton_cpp_rt.py
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/add.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/add_triton_cpp_rt.py
 )
 
 add_library(add_op SHARED add_op.cpp)
