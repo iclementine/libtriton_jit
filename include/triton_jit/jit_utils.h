@@ -25,9 +25,16 @@ constexpr const char *to_triton_typename(c10::ScalarType t) {
       return "i32";
     case c10::ScalarType::Long:
       return "i64";
+    case c10::ScalarType::Short:
+      return "i16";
+    case c10::ScalarType::Char:
+      return "i8";
+    case c10::ScalarType::Byte:
+      return "u8";
     case c10::ScalarType::Bool:
       return "i1";
     default:
+      throw std::runtime_error("<unsupported_type>");
       return "<unsupported_type>";
   }
 }
