@@ -16,6 +16,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include "cuda.h"
 
@@ -45,6 +46,10 @@ enum struct ArgType : int8_t {
 struct StaticSignature {
   int num_args;
   std::vector<ArgType> arg_type;
+
+  const ArgType &at(size_t i) const {
+    return arg_type.at(i);
+  }
 };
 
 /**
@@ -84,6 +89,127 @@ class TritonJITFunction {
   TritonJITFunction(std::string_view path, std::string_view name);
 };
 
+struct ArgHandle {
+  const StaticSignature &ssig;
+  c10::SmallVector<void *> &data_pointers;
+  c10::SmallVector<void *> &kernel_args;
+  c10::SmallVector<std::string> &signature;
+  int idx;
+
+  template <typename... Args>
+  void handle_args(Args... args) {
+    (handle_arg(args), ...);
+  }
+
+  template <typename T>
+  void handle_arg(const T &item) {
+    if constexpr (is_optional<decltype(item)>::value) {
+      handle_optional(item);
+    } else if constexpr (is_same_ignore_cvref<c10::Scalar, T>::value) {
+      handle_scalar(item);
+    } else {
+      handle_arg_plain(item);
+    }
+  }
+
+  template <typename T>
+  void handle_optional(const std::optional<T> &item) {
+    if (item.has_value()) {
+      const T &v = item.value();
+      handle_arg(v);
+    } else {
+      handle_arg(std::nullopt);
+    }
+  }
+
+  void handle_scalar(const c10::Scalar &item) {
+    TORCH_CHECK(!item.isSymbolic());
+    c10::ScalarType tp = item.type();
+    const void *p = item.data_ptr();
+    if (tp == c10::ScalarType::Bool) {
+      handle_arg_plain(*reinterpret_cast<const bool *>(p));
+    } else if (tp == c10::ScalarType::Long) {
+      handle_arg_plain(*reinterpret_cast<const int64_t *>(p));
+    } else if (tp == c10::ScalarType::UInt64) {
+      handle_arg_plain(*reinterpret_cast<const uint64_t *>(p));
+    } else if (tp == c10::ScalarType::Double) {
+      handle_arg_plain(*reinterpret_cast<const double *>(p));
+    } else {
+      throw std::runtime_error("unsupported scalar type.");
+    }
+  }
+
+  template <typename T>
+  void handle_arg_plain(const T &item) {
+    if constexpr (is_same_ignore_cvref<at::Tensor, T>::value) {
+      handle_tensor(item);
+    } else if constexpr (is_same_ignore_cvref<std::nullopt_t, T>::value) {
+      // Assumption nullopt is alway treated as constexpr,
+      // even if the parameter is not marked as constexpr
+      signature.push_back("nullopt");
+    } else {
+      if (ssig.at(idx) == ArgType::CONSTEXPR) {  // constexpr
+        handle_constexpr(item);
+      } else if (ssig.at(idx) == ArgType::SPECIALIZED) {  // specialzied
+        handle_specialized(item);
+      } else {  // ArgType::NON-CONSTEXPR
+        handle_non_constexpr(item);
+      }
+    }
+    idx++;
+  }
+
+  void handle_tensor(const at::Tensor &item) {
+    // Assumuption: Tensor is never constexpr
+    TORCH_CHECK(this->ssig.at(idx) != ArgType::CONSTEXPR);
+    void *p_item = item.data_ptr();
+    data_pointers.push_back(p_item);
+    kernel_args.push_back(&(data_pointers.back()));
+
+    const char *dtype = to_triton_typename(item.scalar_type());
+    const char *specialization = "";
+    if (ssig.at(idx) == ArgType::SPECIALIZED) {
+      specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
+    }
+    std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
+    signature.push_back(sig_for_idx);
+  }
+
+  template <typename T>
+  void handle_constexpr(const T &item) {
+    signature.push_back(fmt::format("{}", item));
+  }
+
+  template <typename T>
+  void handle_specialized(const T &item) {
+    const char *dtype = triton_type<decltype(item)>::name;
+    if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
+      const char *specialization = spec(item);
+      if (specialization != ":1") {
+        const void *p_item = &item;
+        // cuLaunchKernel requires `void*`, so if the argument is const,
+        // we need to const_cast to remove the const qualifier to call it
+        kernel_args.push_back(const_cast<void *>(p_item));
+      }
+      std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
+      signature.push_back(sig_for_idx);
+    } else {
+      const void *p_item = &item;
+      kernel_args.push_back(const_cast<void *>(p_item));
+      std::string sig_for_idx = fmt::format("{}", dtype);
+      signature.push_back(sig_for_idx);
+    }
+  }
+
+  template <typename T>
+  void handle_non_constexpr(const T &item) {
+    const void *p_item = &item;
+    kernel_args.push_back(const_cast<void *>(p_item));
+    const char *dtype = triton_type<decltype(item)>::name;
+    signature.push_back(dtype);
+  }
+};
+
 template <typename... Args>
 void TritonJITFunction::operator()(CUstream stream,
                                    unsigned int grid_x,
@@ -100,75 +226,13 @@ void TritonJITFunction::operator()(CUstream stream,
   // out of the function
   c10::SmallVector<void *> data_pointers;
   data_pointers.reserve(num_args);
-
   c10::SmallVector<void *> kernel_args;
   kernel_args.reserve(num_args);
-
   c10::SmallVector<std::string> signature;
   signature.reserve(num_args);
 
-  int idx = 0;
-  auto arg_handle = [&](const auto &item) {
-    if constexpr (has_data_ptr<decltype(item)>::value) {
-      void *p_item = item.data_ptr();
-      data_pointers.push_back(p_item);
-      kernel_args.push_back(&(data_pointers.back()));
-
-      const char *dtype = to_triton_typename(item.scalar_type());
-      const char *specialization = "";
-      if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {
-        specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
-      }
-      std::string sig_for_idx = fmt::format("*{}{}", dtype, specialization);
-      signature.push_back(sig_for_idx);
-    } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
-                                        std::nullptr_t>) {
-      signature.push_back("*i8");
-    } else if constexpr (std::is_same_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>,
-                                        std::nullopt_t>) {
-      signature.push_back("nullopt");
-    } else if (this->static_sig_.arg_type[idx] == ArgType::CONSTEXPR) {  // constexpr
-      signature.push_back(fmt::format("{}", item));
-    } else if (this->static_sig_.arg_type[idx] == ArgType::SPECIALIZED) {  // specialzied
-      const char *dtype = triton_type<decltype(item)>::name;
-      if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
-        const char *specialization = spec(item);
-        if (specialization != ":1") {
-          const void *p_item = &item;
-          // cuLaunchKernel requires `void*`, so if the argument is const,
-          // we need to const_cast to remove the const qualifier to call it
-          kernel_args.push_back(const_cast<void *>(p_item));
-        }
-        std::string sig_for_idx = fmt::format("{}{}", dtype, specialization);
-        signature.push_back(sig_for_idx);
-      } else {
-        const void *p_item = &item;
-        kernel_args.push_back(const_cast<void *>(p_item));
-        std::string sig_for_idx = fmt::format("{}", dtype);
-        signature.push_back(sig_for_idx);
-      }
-    } else {  // ArgType::NON_SPECIALIZED
-      const void *p_item = &item;
-      kernel_args.push_back(const_cast<void *>(p_item));
-      const char *dtype = triton_type<decltype(item)>::name;
-      signature.push_back(dtype);
-    }
-  };
-
-  auto arg_handle_opt = [&](const auto &item) {
-    if constexpr (is_optional<decltype(item)>::value) {
-      if (item.has_value()) {
-        const auto &v = item.value();
-        arg_handle(v);
-      } else {
-        arg_handle(std::nullopt);
-      }
-    } else {
-      arg_handle(item);
-    }
-    idx++;
-  };
-  (arg_handle_opt(args), ...);
+  ArgHandle handler = {this->static_sig_, data_pointers, kernel_args, signature, 0};
+  (handler.handle_arg(args), ...);
 
   // global scratch: introduced in triton 3.3
   void *global_scratch = nullptr;
