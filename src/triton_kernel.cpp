@@ -39,7 +39,7 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
 
   CUmodule module;
   std::string cubin_path = fmt::format("{}/{}.cubin", this->dir_, this->kernel_name_);
-  LOG(INFO) << fmt::format("Loading cubin {} into {}", cubin_path, device_index);
+  LOG(INFO) << fmt::format("Loading cubin {} into device {}", cubin_path, device_index);
   checkCudaErrors(cuModuleLoad(&module, cubin_path.c_str()));
   this->modules_.emplace(device_index, module);
 }

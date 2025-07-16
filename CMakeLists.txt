@@ -89,6 +89,13 @@ endif()
 # --------------------------- subdirectories ---------------------------
 add_subdirectory(src)
 if(TRITON_JIT_BUILD_EXAMPLES)
+  set(INSTALL_GTEST OFF) # we do not install tests
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.16.0
+  )
+  FetchContent_MakeAvailable(googletest)
   add_subdirectory(examples)
 endif()
 

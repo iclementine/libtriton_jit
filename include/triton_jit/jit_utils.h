@@ -58,7 +58,20 @@ template <typename T>
 struct is_optional : public is_optional_helper<std::remove_const_t<std::remove_reference_t<T>>> {};
 
 template <typename T>
+struct is_scalar_helper : public std::false_type {};
+
+template <>
+struct is_scalar_helper<c10::Scalar> : public std::true_type {};
+
+template <typename T>
+struct is_scalar : public is_scalar_helper<std::remove_const_t<std::remove_reference_t<T>>> {};
+
+template <typename T>
 struct triton_type_helper;
+
+template <typename T, typename U>
+struct is_same_ignore_cvref : public std::is_same<std::remove_reference_t<std::remove_cv_t<T>>,
+                                                  std::remove_reference_t<std::remove_cv_t<U>>> {};
 
 #define DEFINE_TRITON_TYPE(T, Name)           \
   template <>                                 \
@@ -68,11 +81,12 @@ struct triton_type_helper;
 
 DEFINE_TRITON_TYPE(bool, "i1");
 DEFINE_TRITON_TYPE(int, "i32");
+DEFINE_TRITON_TYPE(uint, "u32");
 DEFINE_TRITON_TYPE(int64_t, "i64");
+DEFINE_TRITON_TYPE(uint64_t, "u64");
 DEFINE_TRITON_TYPE(float, "fp32");
 DEFINE_TRITON_TYPE(double, "fp64");
 DEFINE_TRITON_TYPE(std::nullptr_t, "*i8");
-DEFINE_TRITON_TYPE(std::nullopt_t, "*i8");
 
 #undef DEFINE_TRITON_TYPE
 
