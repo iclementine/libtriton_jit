@@ -7,6 +7,12 @@ set(CMAKE_CXX_STANDARD 17) # for fold-expression
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) # Ensures only standard-compliant C++ is used
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# It is also recommended to install them in a Python virtual environment
+set(Python_FIND_VIRTUALENV FIRST)
+if(NOT DEFINED ENV{VIRTUAL_ENV})
+    message(WARNING "Warning: No Python virtual environment detected. Consider using a virtual environment for better package management.")
+endif()
+
 
 # --------------------------- RPATH settings ---------------------------
 # https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
@@ -72,7 +78,6 @@ else()
   # so as to build a shared library that links libfmt.a
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
-
 if(TRITON_JIT_USE_EXTERNAL_PYBIND11)
   execute_process(COMMAND ${Python_EXECUTABLE} -m pybind11 --cmakedir
     OUTPUT_VARIABLE pybind11_ROOT
@@ -85,7 +90,6 @@ else()
     DOWNLOAD_EXTRACT_TIMESTAMP ON)
   FetchContent_MakeAvailable(pybind11)
 endif()
-
 # --------------------------- subdirectories ---------------------------
 add_subdirectory(src)
 if(TRITON_JIT_BUILD_EXAMPLES)
