@@ -1,3 +1,4 @@
+set(Python_FIND_VIRTUALENV FIRST) 
 # Since the library links torch, we need to ensure the same ABI with pre-compiled torch
 # libtorch installed from pypi is not built with cxx11 abi,
 # if we split the library into several targets, we need to ensure that the ABI is the same
