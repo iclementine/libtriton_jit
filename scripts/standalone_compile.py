@@ -148,11 +148,11 @@ def _compile_a_kernel(
     divisible_by_16 = [i for i, h in hints.items() if h == 16]
     equal_to_1 = [i for i, h in hints.items() if h == 1]
 
-    if triton_version == Version("3.1.0"):
+    if triton_version.major == 3 and triton_version.minor == 1:
         attrs = triton.compiler.AttrsDescriptor(
             divisible_by_16=divisible_by_16, equal_to_1=equal_to_1
         )
-    elif triton_version == Version("3.2.0"):
+    elif triton_version.major == 3 and triton_version.minor == 2:
         attrs = triton.backends.compiler.AttrsDescriptor.from_dict(
             {
                 "arg_properties": {
@@ -162,7 +162,7 @@ def _compile_a_kernel(
                 "cls": "AttrsDescriptor",
             }
         )
-    elif triton_version == Version("3.3.0"):
+    elif triton_version.major == 3 and triton_version.minor == 3:
         attrs = {(k,): [["tt.divisibility", 16]] for k, v in hints.items() if v == 16}
     else:
         raise RuntimeError(

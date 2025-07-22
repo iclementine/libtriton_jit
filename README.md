@@ -120,11 +120,11 @@ Though this project is a C++project, it embeds a Python interpreter to execute s
 
 Also, CMake and Ninja can be installed from PyPI.
 
-It is also recommended to install them in a Python virtual environment.
+It is also recommended to install them in a Python virtual environment. Please note that using Anaconda or Miniconda is not recommended for this project. Their pre-packaged compilers and standard libraries can often lead to conflicts or errors during the project's build process.
 
 ```shell
 # activate the Python virtualenv (optional)
-pip install torch triton cmake ninja packaging pybind11
+pip install "torch>=2.5" "triton>=3.1.0,<3.4.0" "cmake" "ninja" "packaging" "pybind11" "numpy"
 ```
 
 ### Configure & Generate the Build System
