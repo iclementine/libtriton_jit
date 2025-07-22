@@ -35,3 +35,20 @@ dist
 build
 .vscode
 __pycache__
+
+# CMake build files
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+*.make
+*.dir
+*.marks
+
+# Makefiles
+Makefile
+cmake_install.cmake
+
+
+# Other temporary files
+*.log
+*.tmp
