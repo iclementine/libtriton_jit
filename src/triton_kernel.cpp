@@ -44,6 +44,14 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   LOG(INFO) << fmt::format("Loading cubin {} into device {}", cubin_path, device_index);
   checkCudaErrors(cuModuleLoad(&module, cubin_path.c_str()));
   this->modules_.emplace(device_index, module);
+  int shared_optin;
+  CUdevice d;
+  checkCudaErrors(cuCtxGetDevice(&d)); 
+  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,d);
+  if(this->shared_> shared_optin){
+    throw std::runtime_error(fmt::format("Out0fResources: Requested shared memory ({}) bytes exceeds GPU's maximum ({}) bytes.",
+                                      this->shared_, shared_optin));
+  }
 }
 
 // consider using a variadic template
@@ -71,9 +79,6 @@ void TritonKernel::launch(unsigned int grid_x,
   int shared_optin;
   cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,d);
   int shared_memory = this->shared_;
-  // TODO: 
-  // The current implementation checks if both 'shared' and 'shared_optin' exceed 49152 bytes. 
-  // Update this logic to allow for a configurable threshold that can be specified as a parameter.
   if (this->shared_ > 49152 && shared_optin > 49152) {
     LOG(INFO) << fmt::format("Condition met: this->shared_ ={} && shared_optin = {}. Setting CU_FUNC_CACHE_PREFER_SHARED.",this->shared_,shared_optin);
     checkCudaErrors(cuFuncSetCacheConfig(f, CU_FUNC_CACHE_PREFER_SHARED));
