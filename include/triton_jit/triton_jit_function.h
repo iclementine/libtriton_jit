@@ -131,7 +131,6 @@ struct ArgHandle {
   }
 
   void handle_scalar(const c10::Scalar &item) {
-    LOG(INFO) << "handle_scalar";
     TORCH_CHECK(!item.isSymbolic());
     c10::ScalarType tp = item.type();
     const void *p = item.data_ptr();
@@ -170,13 +169,11 @@ struct ArgHandle {
 
   void handle_tensor(const at::Tensor &item) {
     // Assumuption: Tensor is never constexpr
-    LOG(INFO) << "handle_tensor";
     TORCH_CHECK(this->ssig.at(idx) != ArgType::CONSTEXPR);
     void *p_item = item.data_ptr();
     data_pointers.push_back(p_item);
     kernel_args.push_back(&(data_pointers.back()));
-    const char *dtype;
-    dtype = to_triton_typename(item.scalar_type());
+    const char *dtype = to_triton_typename(item.scalar_type());
 
     const char *specialization = "";
     if (ssig.at(idx) == ArgType::SPECIALIZED) {
@@ -188,13 +185,11 @@ struct ArgHandle {
 
   template <typename T>
   void handle_constexpr(const T &item) {
-    LOG(INFO) << "handle_constexpr";
     signature.push_back(fmt::format("{}", item));
   }
 
   template <typename T>
   void handle_specialized(const T &item) {
-    LOG(INFO) << "handle_specialized";
     const char *dtype = triton_type<decltype(item)>::name;
     if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
       const char *specialization = spec(item);
@@ -216,7 +211,6 @@ struct ArgHandle {
 
   template <typename T>
   void handle_non_constexpr(const T &item) {
-    LOG(INFO) << "handle_non_constexpr";
     const void *p_item = &item;
     kernel_args.push_back(const_cast<void *>(p_item));
     const char *dtype = triton_type<decltype(item)>::name;
