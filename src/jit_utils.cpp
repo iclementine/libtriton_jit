@@ -77,7 +77,6 @@ void reinterpret_and_print_args(void** raw_args_list, std::string full_signature
     LOG(INFO) << "Reinterpreting raw arguments:" << std::endl;
     LOG(INFO) << "-------------------------------" << std::endl;
     
-    // 重新解释并打印前三个 Tensor 的数据指针
     void* tensor_ptr_a = raw_args_list[0];
     void* tensor_ptr_b = raw_args_list[1];
     void* tensor_ptr_out = raw_args_list[2];
