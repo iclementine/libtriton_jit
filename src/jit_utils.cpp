@@ -27,8 +27,13 @@ std::filesystem::path get_path_of_this_library() {
 
 std::filesystem::path get_script_dir() {
   const static std::filesystem::path script_dir = []() {
-    std::filesystem::path installed_script_dir =
-        get_path_of_this_library().parent_path().parent_path() / "share" / "triton_jit" / "scripts";
+    std::filesystem::path installed_script_dir;
+    try{
+      installed_script_dir = get_path_of_this_library().parent_path().parent_path() / "share" / "triton_jit" / "scripts";
+    }catch(std::runtime_error& e){
+      std::cerr << e.what() << std::endl;
+    }
+
     if (std::filesystem::exists(installed_script_dir)) {
       return installed_script_dir;
     } else {
@@ -70,5 +75,27 @@ std::filesystem::path get_cache_path() {
     return cache_dir;
   }();
   return cache_dir;
+}
+// TODO: support reinterpret_and_print_args through full_signature
+// now only support binary add
+void reinterpret_and_print_args(void** raw_args_list, std::string full_signature) {
+    LOG(INFO) << "Reinterpreting raw arguments:" << std::endl;
+    LOG(INFO) << "-------------------------------" << std::endl;
+    
+    // 重新解释并打印前三个 Tensor 的数据指针
+    void* tensor_ptr_a = raw_args_list[0];
+    void* tensor_ptr_b = raw_args_list[1];
+    void* tensor_ptr_out = raw_args_list[2];
+    
+    LOG(INFO) << "Tensor A Data Pointer: " << tensor_ptr_a << std::endl;
+    LOG(INFO) << "Tensor B Data Pointer: " << tensor_ptr_b << std::endl;
+    LOG(INFO) << "Output Tensor Data Pointer: " << tensor_ptr_out << std::endl;
+    
+    LOG(INFO) << "-------------------------------" << std::endl;
+    
+    int64_t* n_ptr = static_cast<int64_t*>(raw_args_list[3]);
+    int64_t n_value = *n_ptr;
+    
+    LOG(INFO) << "Scalar n (reinterpreted as int64): " << n_value << std::endl;
 }
 }  // namespace triton_jit

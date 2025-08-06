@@ -79,6 +79,14 @@ class TritonJITFunction {
                   unsigned int num_warps,
                   unsigned int num_stages,
                   Args... args) const;
+  void launch_with_raw_args(CUstream stream,
+                      unsigned int grid_x,
+                      unsigned int grid_y,
+                      unsigned int grid_z,
+                      unsigned int num_warps,
+                      unsigned int num_stages,
+                      std::string full_signature,
+                      void** args) const;
 
  private:
   const TritonKernel &get_kernel(std::string_view signature,
@@ -106,7 +114,12 @@ struct ArgHandle {
     if constexpr (is_optional<decltype(item)>::value) {
       handle_optional(item);
     } else if constexpr (is_same_ignore_cvref<c10::Scalar, T>::value) {
-      handle_scalar(item);
+      try{
+        handle_scalar(item);
+      }catch(std::runtime_error& e){
+        std::cerr << e.what() << std::endl;
+        return;
+      }
     } else {
       handle_arg_plain(item);
     }
@@ -123,11 +136,12 @@ struct ArgHandle {
   }
 
   void handle_scalar(const c10::Scalar &item) {
+    LOG(INFO) << "handle_scalar";
     TORCH_CHECK(!item.isSymbolic());
     c10::ScalarType tp = item.type();
     const void *p = item.data_ptr();
     if (tp == c10::ScalarType::Bool) {
-      handle_arg_plain(*reinterpret_cast<const bool *>(p));
+       (*reinterpret_cast<const bool *>(p));
     } else if (tp == c10::ScalarType::Long) {
       handle_arg_plain(*reinterpret_cast<const int64_t *>(p));
     } else if (tp == c10::ScalarType::UInt64) {
@@ -161,12 +175,19 @@ struct ArgHandle {
 
   void handle_tensor(const at::Tensor &item) {
     // Assumuption: Tensor is never constexpr
+    LOG(INFO) << "handle_tensor";
     TORCH_CHECK(this->ssig.at(idx) != ArgType::CONSTEXPR);
     void *p_item = item.data_ptr();
     data_pointers.push_back(p_item);
     kernel_args.push_back(&(data_pointers.back()));
+    const char *dtype;
+    try{
+      dtype = to_triton_typename(item.scalar_type());
+    }catch(std::runtime_error& e){
+      std::cerr << e.what() << std::endl;
+      return;
+    }
 
-    const char *dtype = to_triton_typename(item.scalar_type());
     const char *specialization = "";
     if (ssig.at(idx) == ArgType::SPECIALIZED) {
       specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
@@ -177,11 +198,13 @@ struct ArgHandle {
 
   template <typename T>
   void handle_constexpr(const T &item) {
+    LOG(INFO) << "handle_constexpr";
     signature.push_back(fmt::format("{}", item));
   }
 
   template <typename T>
   void handle_specialized(const T &item) {
+    LOG(INFO) << "handle_specialized";
     const char *dtype = triton_type<decltype(item)>::name;
     if constexpr (std::is_integral_v<std::remove_cv_t<std::remove_reference_t<decltype(item)>>>) {
       const char *specialization = spec(item);
@@ -203,6 +226,7 @@ struct ArgHandle {
 
   template <typename T>
   void handle_non_constexpr(const T &item) {
+    LOG(INFO) << "handle_non_constexpr";
     const void *p_item = &item;
     kernel_args.push_back(const_cast<void *>(p_item));
     const char *dtype = triton_type<decltype(item)>::name;
@@ -238,15 +262,6 @@ void TritonJITFunction::operator()(CUstream stream,
   void *global_scratch = nullptr;
   data_pointers.push_back(global_scratch);
   kernel_args.push_back(&(data_pointers.back()));
-
-  // std::cout << "======== start ========" << std::endl;
-  // std::cout << "KERNEL_NAME: " << this->function_name_ << std::endl;
-  // int j = 0;
-  // for (const auto __t : kernel_args) {
-  //   std::cout << "ARG " << j << ": " << __t << std::endl;
-  //   j++;
-  // }
-
   std::string full_signature;
   for (int i = 0; i < signature.size(); i++) {
     if (i == 0) {
@@ -256,6 +271,9 @@ void TritonJITFunction::operator()(CUstream stream,
       full_signature += signature[i];
     }
   }
+  LOG(INFO) << fmt::format("full signature is {}", full_signature);
+  LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
+  reinterpret_and_print_args(kernel_args.data(),full_signature);
 
   // TODO: use torch backend-agnostic device APIs
   CUcontext ctx;
@@ -264,10 +282,14 @@ void TritonJITFunction::operator()(CUstream stream,
   CUdevice d;
   // device management is done with torch, assume one CUcontext per device                         // int
   checkCudaErrors(cuCtxGetDevice(&d));
-
-  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
-  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
-  return;
+  try{
+    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
+    return;
+  }catch(std::runtime_error& e){
+    std::cerr << e.what() << std::endl;
+    return;
+  }
 }
 
 }  // namespace triton_jit
