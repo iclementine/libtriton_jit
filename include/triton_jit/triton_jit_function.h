@@ -136,7 +136,7 @@ struct ArgHandle {
     c10::ScalarType tp = item.type();
     const void *p = item.data_ptr();
     if (tp == c10::ScalarType::Bool) {
-       (*reinterpret_cast<const bool *>(p));
+       handle_arg_plain(*reinterpret_cast<const bool *>(p));
     } else if (tp == c10::ScalarType::Long) {
       handle_arg_plain(*reinterpret_cast<const int64_t *>(p));
     } else if (tp == c10::ScalarType::UInt64) {
