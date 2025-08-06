@@ -266,14 +266,9 @@ void TritonJITFunction::operator()(CUstream stream,
   CUdevice d;
   // device management is done with torch, assume one CUcontext per device                         // int
   checkCudaErrors(cuCtxGetDevice(&d));
-  try{
-    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
-    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
-    return;
-  }catch(std::runtime_error& e){
-    std::cerr << e.what() << std::endl;
-    return;
-  }
+  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
+  return;
 }
 
 }  // namespace triton_jit
