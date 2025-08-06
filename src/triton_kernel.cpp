@@ -11,6 +11,7 @@
 using json = nlohmann::json;
 
 
+
 namespace triton_jit {
 TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
     : dir_(std::string(dir)), kernel_name_(std::string(kernel_name)) {
@@ -91,6 +92,21 @@ void TritonKernel::launch(unsigned int grid_x,
     LOG(INFO) << fmt::format("shared memory to add {}",shared_memory);
   }
   LOG(INFO) << "cuLaunchKernel" ;
+  int shared_optin;
+  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,d);
+  int shared_memory = this->shared_;
+  if (this->shared_ > 49152 && shared_optin > 49152) {
+    LOG(INFO) << fmt::format("Condition met: this->shared_ ={} && shared_optin = {}. Setting CU_FUNC_CACHE_PREFER_SHARED.",this->shared_,shared_optin);
+    checkCudaErrors(cuFuncSetCacheConfig(f, CU_FUNC_CACHE_PREFER_SHARED));
+    int shared_total, shared_static;
+    checkCudaErrors(cuDeviceGetAttribute(&shared_total, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_MULTIPROCESSOR,d));
+    checkCudaErrors(cuFuncGetAttribute(&shared_static, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, f));
+    LOG(INFO) << fmt::format("current shared memory total {}",shared_total);
+    LOG(INFO) << fmt::format("current shared memory static {}",shared_static);
+    checkCudaErrors(cuFuncSetAttribute(f, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES,shared_optin - shared_static));
+    shared_memory = shared_optin - shared_static;
+    LOG(INFO) << fmt::format("shared memory to add {}",shared_memory);
+  }
   checkCudaErrors(cuLaunchKernel(f,
                                  /*grid*/
                                  grid_x,
