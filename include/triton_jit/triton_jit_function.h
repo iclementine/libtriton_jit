@@ -114,12 +114,7 @@ struct ArgHandle {
     if constexpr (is_optional<decltype(item)>::value) {
       handle_optional(item);
     } else if constexpr (is_same_ignore_cvref<c10::Scalar, T>::value) {
-      try{
-        handle_scalar(item);
-      }catch(std::runtime_error& e){
-        std::cerr << e.what() << std::endl;
-        return;
-      }
+      handle_scalar(item);
     } else {
       handle_arg_plain(item);
     }
@@ -181,12 +176,7 @@ struct ArgHandle {
     data_pointers.push_back(p_item);
     kernel_args.push_back(&(data_pointers.back()));
     const char *dtype;
-    try{
-      dtype = to_triton_typename(item.scalar_type());
-    }catch(std::runtime_error& e){
-      std::cerr << e.what() << std::endl;
-      return;
-    }
+    dtype = to_triton_typename(item.scalar_type());
 
     const char *specialization = "";
     if (ssig.at(idx) == ArgType::SPECIALIZED) {

@@ -68,12 +68,7 @@ void TritonKernel::launch(unsigned int grid_x,
   CUdevice d;
   checkCudaErrors(
       cuCtxGetDevice(&d));  // device management is done with torch, assume one CUcontext per device
-  try{
-    this->lazy_init_handle(d);
-  }catch(std::runtime_error& e){
-    std::cerr << e.what() << std::endl;
-    return;
-  }
+  this->lazy_init_handle(d);
   // TODO: some kernels need to be launched via cuLaunchKernelEx, add that later?
   CUfunction f;
   checkCudaErrors(

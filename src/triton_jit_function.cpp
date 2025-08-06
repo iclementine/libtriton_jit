@@ -134,12 +134,8 @@ void TritonJITFunction::launch_with_raw_args(
   CUdevice d;
   checkCudaErrors(cuCtxGetDevice(&d));
   LOG(INFO) << fmt::format("launching kernel");
-  try {
-    const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
-    kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
-  } catch(std::runtime_error& e) {
-    std::cerr << e.what() << std::endl;
-    return;
-  }
+  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
+
 }
 }  // namespace triton_jit

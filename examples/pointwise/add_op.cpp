@@ -34,7 +34,10 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   f(stream, num_blocks, 1, 1, num_warps, num_stages, a, b, out, n, tile_size);
   return out;
 }
+
+/*
 // demo: add tensor using `launch_with_raw_args`
+// replace flaggems/lib/add.cpp
 at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
     auto res = torch::broadcast_tensors({a_, b_});
     const at::Tensor& a = res[0].contiguous();
@@ -70,6 +73,8 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
 
     return out;
 }
+*/
+
 
 TORCH_LIBRARY(my_ops, m) {
   m.def("add_tensor(Tensor self, Tensor other) -> Tensor");

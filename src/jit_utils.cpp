@@ -27,12 +27,7 @@ std::filesystem::path get_path_of_this_library() {
 
 std::filesystem::path get_script_dir() {
   const static std::filesystem::path script_dir = []() {
-    std::filesystem::path installed_script_dir;
-    try{
-      installed_script_dir = get_path_of_this_library().parent_path().parent_path() / "share" / "triton_jit" / "scripts";
-    }catch(std::runtime_error& e){
-      std::cerr << e.what() << std::endl;
-    }
+    std::filesystem::path installed_script_dir = get_path_of_this_library().parent_path().parent_path() / "share" / "triton_jit" / "scripts";
 
     if (std::filesystem::exists(installed_script_dir)) {
       return installed_script_dir;
