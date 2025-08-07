@@ -80,13 +80,13 @@ class TritonJITFunction {
                   unsigned int num_stages,
                   Args... args) const;
   void launch_with_raw_args(CUstream stream,
-                      unsigned int grid_x,
-                      unsigned int grid_y,
-                      unsigned int grid_z,
-                      unsigned int num_warps,
-                      unsigned int num_stages,
-                      std::string full_signature,
-                      void** args) const;
+                            unsigned int grid_x,
+                            unsigned int grid_y,
+                            unsigned int grid_z,
+                            unsigned int num_warps,
+                            unsigned int num_stages,
+                            std::string full_signature,
+                            void **args) const;
 
  private:
   const TritonKernel &get_kernel(std::string_view signature,
@@ -135,7 +135,7 @@ struct ArgHandle {
     c10::ScalarType tp = item.type();
     const void *p = item.data_ptr();
     if (tp == c10::ScalarType::Bool) {
-       handle_arg_plain(*reinterpret_cast<const bool *>(p));
+      handle_arg_plain(*reinterpret_cast<const bool *>(p));
     } else if (tp == c10::ScalarType::Long) {
       handle_arg_plain(*reinterpret_cast<const int64_t *>(p));
     } else if (tp == c10::ScalarType::UInt64) {
@@ -257,7 +257,7 @@ void TritonJITFunction::operator()(CUstream stream,
   }
   LOG(INFO) << fmt::format("full signature is {}", full_signature);
   LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
-  reinterpret_and_print_args(kernel_args.data(),full_signature);
+  reinterpret_and_print_args(kernel_args.data(), full_signature);
 
   // TODO: use torch backend-agnostic device APIs
   CUcontext ctx;

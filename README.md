@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The project `libtriton_jit` is an implementation of Triton runtime in C++. It offers shims to make it easier to use Triton Lang inside a C++-based project. The user experience is similar to Triton's native Python runtime. You can define Jit functions in Python scripts and run them in c++ code. 
+The project `libtriton_jit` is an implementation of Triton runtime in C++. It offers shims to make it easier to use Triton Lang inside a C++-based project. The user experience is similar to Triton's native Python runtime. You can define Jit functions in Python scripts and run them in c++ code.
 
 It aims to reduce the inevitable Python overhead when using Triton in Python code. For many kernels, the execution time of the kernel is much shorter than the CPU overhead. Assume that we define a function(the wrapper) to compute torch tensors, which invokes some triton jit functions. The CPU overhead comes mainly from three parts:
 
@@ -38,12 +38,12 @@ The C++ class`TritonJitFunction` has a variadic function template `operator()` t
 
 In the current implementation, the full signature is represented as a concatenated string with semicolons as separators. Each part corresponds to a parameter of the jit function.
 
-- For constexpr, the format is `{value}`, the value is formatted as-is, and the type is omitted. Note that boolean values are formatted as  "0" or "1", and None is formatted as "nullopt" since the corresponding C++ object of Python value `None` is `std::nullopt`. 
+- For constexpr, the format is `{value}`, the value is formatted as-is, and the type is omitted. Note that boolean values are formatted as  "0" or "1", and None is formatted as "nullopt" since the corresponding C++ object of Python value `None` is `std::nullopt`.
 
 - For other parameters, the format is `{type}{spec}`.
-  
+
   - type: for a C++ type, there is a mapping from it to a string, for example, int64_t is mapped to "i64". For a torch Tensor, there is also a mapping from its data type to a string with the same rule. The string is prefixed with a `*`, which means it is a pointer to that type;
-  
+
   - Spec: specialization is only for data pointers or integers. It has 3 values, ":16" means divisible by 16, ":1" means equals 1, and "" means neither.
 
 ### Invokes the Compilation
@@ -116,7 +116,7 @@ We have examples of pointwise addition and summation.
 
 ### Install dependencies
 
-Though this project is a C++project, it embeds a Python interpreter to execute some Python code, so it has some Python dependencies. Also, those Python packages are not pure Python; this project also uses their CMake packages, headers, and libraries. 
+Though this project is a C++project, it embeds a Python interpreter to execute some Python code, so it has some Python dependencies. Also, those Python packages are not pure Python; this project also uses their CMake packages, headers, and libraries.
 
 Also, CMake and Ninja can be installed from PyPI.
 

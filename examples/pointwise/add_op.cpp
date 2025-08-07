@@ -69,12 +69,12 @@ at::Tensor add_tensor(const at::Tensor& a_, const at::Tensor& b_) {
     c10::DeviceGuard guard(out.device());
     CUstream raw_stream = static_cast<CUstream>(stream.stream());
 
-    f.launch_with_raw_args(raw_stream, num_blocks, 1, 1, num_warps, num_stages, signature, raw_args_list.data());
+    f.launch_with_raw_args(raw_stream, num_blocks, 1, 1, num_warps, num_stages, signature,
+raw_args_list.data());
 
     return out;
 }
 */
-
 
 TORCH_LIBRARY(my_ops, m) {
   m.def("add_tensor(Tensor self, Tensor other) -> Tensor");
