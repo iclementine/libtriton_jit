@@ -135,4 +135,33 @@ void TritonJITFunction::launch_with_raw_args(CUstream stream,
   const TritonKernel& kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
 }
+
+
+std::tuple<std::string,std::string> gen_add(int ndims) {
+    namespace py = pybind11;
+    triton_jit::ensure_initialized();
+    py::gil_scoped_acquire gil;
+    std::filesystem::path script_dir = triton_jit::get_script_dir();
+    py::module_ sys = py::module_::import("sys");
+    sys.attr("path").attr("insert")(0, script_dir.c_str());
+    py::module_ mod = py::module_::import("pointwise_dynamic");
+    py::object gen_add_fn = mod.attr("gen_add");
+    py::object ans;
+    try {
+        ans = gen_add_fn(ndims);
+    } catch (const py::error_already_set& e) {
+        std::cerr << "Python exception: " << e.what() << std::endl;
+    }
+    // Explicitly cast the py::object 'ans' to a py::tuple
+    py::tuple result_tuple = ans.cast<py::tuple>();
+
+    // Now, you can safely use integer indexing
+    std::string kernel_name = result_tuple[0].cast<std::string>();
+    std::string file_path = result_tuple[1].cast<std::string>();
+    std::cout<<"kernel_name"<<kernel_name;
+    std::cout<<"file_path"<<file_path;
+    
+    return std::make_tuple(kernel_name, file_path);
+}
+
 }  // namespace triton_jit

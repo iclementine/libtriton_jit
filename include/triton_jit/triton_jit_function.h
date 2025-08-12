@@ -257,7 +257,6 @@ void TritonJITFunction::operator()(CUstream stream,
   }
   LOG(INFO) << fmt::format("full signature is {}", full_signature);
   LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
-  reinterpret_and_print_args(kernel_args.data(), full_signature);
 
   // TODO: use torch backend-agnostic device APIs
   CUcontext ctx;
@@ -270,5 +269,7 @@ void TritonJITFunction::operator()(CUstream stream,
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;
 }
+void ensure_initialized();
+std::tuple<std::string,std::string> gen_add(int ndim);
 
 }  // namespace triton_jit
