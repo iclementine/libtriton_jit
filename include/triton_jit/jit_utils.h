@@ -105,5 +105,4 @@ std::filesystem::path get_script_dir();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
 std::filesystem::path get_cache_path();
-void reinterpret_and_print_args(void **raw_args_list, std::string full_signature);
 }  // namespace triton_jit
