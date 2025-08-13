@@ -117,4 +117,22 @@ TritonJITFunction& TritonJITFunction::getInstance(std::string_view path, std::st
   }
   return pos->second;
 }
+
+void TritonJITFunction::launch_with_raw_args(CUstream stream,
+                                             unsigned int grid_x,
+                                             unsigned int grid_y,
+                                             unsigned int grid_z,
+                                             unsigned int num_warps,
+                                             unsigned int num_stages,
+                                             std::string full_signature,
+                                             void** args) const {
+  CUcontext ctx;
+  checkCudaErrors(cuStreamGetCtx(stream, &ctx));
+  checkCudaErrors(cuCtxSetCurrent(ctx));
+  CUdevice d;
+  checkCudaErrors(cuCtxGetDevice(&d));
+  LOG(INFO) << fmt::format("launching kernel");
+  const TritonKernel& kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
+}
 }  // namespace triton_jit

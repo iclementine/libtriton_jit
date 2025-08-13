@@ -79,6 +79,14 @@ class TritonJITFunction {
                   unsigned int num_warps,
                   unsigned int num_stages,
                   Args... args) const;
+  void launch_with_raw_args(CUstream stream,
+                            unsigned int grid_x,
+                            unsigned int grid_y,
+                            unsigned int grid_z,
+                            unsigned int num_warps,
+                            unsigned int num_stages,
+                            std::string full_signature,
+                            void **args) const;
 
  private:
   const TritonKernel &get_kernel(std::string_view signature,
@@ -165,8 +173,8 @@ struct ArgHandle {
     void *p_item = item.data_ptr();
     data_pointers.push_back(p_item);
     kernel_args.push_back(&(data_pointers.back()));
-
     const char *dtype = to_triton_typename(item.scalar_type());
+
     const char *specialization = "";
     if (ssig.at(idx) == ArgType::SPECIALIZED) {
       specialization = spec(reinterpret_cast<std::uintptr_t>(data_pointers.back()));
@@ -238,15 +246,6 @@ void TritonJITFunction::operator()(CUstream stream,
   void *global_scratch = nullptr;
   data_pointers.push_back(global_scratch);
   kernel_args.push_back(&(data_pointers.back()));
-
-  // std::cout << "======== start ========" << std::endl;
-  // std::cout << "KERNEL_NAME: " << this->function_name_ << std::endl;
-  // int j = 0;
-  // for (const auto __t : kernel_args) {
-  //   std::cout << "ARG " << j << ": " << __t << std::endl;
-  //   j++;
-  // }
-
   std::string full_signature;
   for (int i = 0; i < signature.size(); i++) {
     if (i == 0) {
@@ -256,6 +255,8 @@ void TritonJITFunction::operator()(CUstream stream,
       full_signature += signature[i];
     }
   }
+  LOG(INFO) << fmt::format("full signature is {}", full_signature);
+  LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
 
   // TODO: use torch backend-agnostic device APIs
   CUcontext ctx;
@@ -264,7 +265,6 @@ void TritonJITFunction::operator()(CUstream stream,
   CUdevice d;
   // device management is done with torch, assume one CUcontext per device                         // int
   checkCudaErrors(cuCtxGetDevice(&d));
-
   const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;

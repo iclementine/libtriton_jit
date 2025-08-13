@@ -10,7 +10,6 @@
 
 using json = nlohmann::json;
 
-
 namespace triton_jit {
 TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
     : dir_(std::string(dir)), kernel_name_(std::string(kernel_name)) {
@@ -19,7 +18,7 @@ TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
   json meta_data = json::parse(f);
   // shared and arch are bound to a kernel dir
   this->shared_ = meta_data["shared"];
-  
+
   this->arch_ = meta_data["target"]["arch"];
   LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_);
 }
@@ -46,11 +45,13 @@ void TritonKernel::lazy_init_handle(CUdevice device_index) const {
   this->modules_.emplace(device_index, module);
   int shared_optin;
   CUdevice d;
-  checkCudaErrors(cuCtxGetDevice(&d)); 
-  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,d);
-  if(this->shared_> shared_optin){
-    throw std::runtime_error(fmt::format("Out0fResources: Requested shared memory ({}) bytes exceeds GPU's maximum ({}) bytes.",
-                                      this->shared_, shared_optin));
+  checkCudaErrors(cuCtxGetDevice(&d));
+  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN, d);
+  if (this->shared_ > shared_optin) {
+    throw std::runtime_error(
+        fmt::format("Out0fResources: Requested shared memory ({}) bytes exceeds GPU's maximum ({}) bytes.",
+                    this->shared_,
+                    shared_optin));
   }
 }
 
@@ -68,7 +69,6 @@ void TritonKernel::launch(unsigned int grid_x,
   CUdevice d;
   checkCudaErrors(
       cuCtxGetDevice(&d));  // device management is done with torch, assume one CUcontext per device
-
   this->lazy_init_handle(d);
   // TODO: some kernels need to be launched via cuLaunchKernelEx, add that later?
   CUfunction f;
@@ -77,20 +77,26 @@ void TritonKernel::launch(unsigned int grid_x,
                           this->modules_.at(d),
                           this->kernel_name_.c_str()));  // maybe check CUfunction instead of CUmodule?
   int shared_optin;
-  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,d);
+  cuDeviceGetAttribute(&shared_optin, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN, d);
   int shared_memory = this->shared_;
   if (this->shared_ > 49152 && shared_optin > 49152) {
-    LOG(INFO) << fmt::format("Condition met: this->shared_ ={} && shared_optin = {}. Setting CU_FUNC_CACHE_PREFER_SHARED.",this->shared_,shared_optin);
+    LOG(INFO) << fmt::format(
+        "Condition met: this->shared_ ={} && shared_optin = {}. Setting CU_FUNC_CACHE_PREFER_SHARED.",
+        this->shared_,
+        shared_optin);
     checkCudaErrors(cuFuncSetCacheConfig(f, CU_FUNC_CACHE_PREFER_SHARED));
     int shared_total, shared_static;
-    checkCudaErrors(cuDeviceGetAttribute(&shared_total, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_MULTIPROCESSOR,d));
+    checkCudaErrors(
+        cuDeviceGetAttribute(&shared_total, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_MULTIPROCESSOR, d));
     checkCudaErrors(cuFuncGetAttribute(&shared_static, CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, f));
-    LOG(INFO) << fmt::format("current shared memory total {}",shared_total);
-    LOG(INFO) << fmt::format("current shared memory static {}",shared_static);
-    checkCudaErrors(cuFuncSetAttribute(f, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES,shared_optin - shared_static));
+    LOG(INFO) << fmt::format("current shared memory total {}", shared_total);
+    LOG(INFO) << fmt::format("current shared memory static {}", shared_static);
+    checkCudaErrors(
+        cuFuncSetAttribute(f, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, shared_optin - shared_static));
     shared_memory = shared_optin - shared_static;
-    LOG(INFO) << fmt::format("shared memory to add {}",shared_memory);
+    LOG(INFO) << fmt::format("shared memory to add {}", shared_memory);
   }
+  LOG(INFO) << "cuLaunchKernel";
   checkCudaErrors(cuLaunchKernel(f,
                                  /*grid*/
                                  grid_x,
