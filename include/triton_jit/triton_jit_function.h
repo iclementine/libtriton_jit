@@ -269,5 +269,7 @@ void TritonJITFunction::operator()(CUstream stream,
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;
 }
+void ensure_initialized();
+std::tuple<std::string,std::string> gen_add(int ndim);
 
 }  // namespace triton_jit
