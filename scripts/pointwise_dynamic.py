@@ -65,7 +65,7 @@ def gen_add(ndim,is_tensor=None,dtypes=None):
     file_path = code_cache_dir() / file_name
     write_atomic(file_path, code.getvalue())
 
-    return kernel_name, file_path.str()
+    return kernel_name, str(file_path)
 
 '''
 kernel_name, file_name = gen_add(1)  
