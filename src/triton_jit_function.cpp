@@ -152,10 +152,8 @@ std::tuple<std::string,std::string> gen_add(int ndims) {
     } catch (const py::error_already_set& e) {
         std::cerr << "Python exception: " << e.what() << std::endl;
     }
-    // Explicitly cast the py::object 'ans' to a py::tuple
     py::tuple result_tuple = ans.cast<py::tuple>();
 
-    // Now, you can safely use integer indexing
     std::string kernel_name = result_tuple[0].cast<std::string>();
     std::string file_path = result_tuple[1].cast<std::string>();
     
