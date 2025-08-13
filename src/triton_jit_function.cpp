@@ -158,8 +158,6 @@ std::tuple<std::string,std::string> gen_add(int ndims) {
     // Now, you can safely use integer indexing
     std::string kernel_name = result_tuple[0].cast<std::string>();
     std::string file_path = result_tuple[1].cast<std::string>();
-    std::cout<<"kernel_name"<<kernel_name;
-    std::cout<<"file_path"<<file_path;
     
     return std::make_tuple(kernel_name, file_path);
 }
