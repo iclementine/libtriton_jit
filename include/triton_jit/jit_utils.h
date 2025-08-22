@@ -104,5 +104,4 @@ struct triton_type : triton_type_helper<std::remove_cv_t<std::remove_reference_t
 std::filesystem::path get_script_dir();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
-std::filesystem::path get_cache_path();
 }  // namespace triton_jit

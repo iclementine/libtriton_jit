@@ -85,12 +85,11 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
     } catch (const py::error_already_set& e) {
       std::cerr << "Python exception: " << e.what() << std::endl;
     }
-    std::string hash = ans.cast<std::string>();
-    LOG(INFO) << "Output: " << hash;
+    std::string cache_dir = ans.cast<std::string>();
+    LOG(INFO) << "Output: " << cache_dir;
 
-    std::string kernel_dir = std::string(get_cache_path() / hash);
-    TritonKernel kernel(kernel_dir, this->function_name_);
-    LOG(INFO) << fmt::format("kernel_dir: {}", kernel_dir);
+    TritonKernel kernel(cache_dir, this->function_name_);
+    LOG(INFO) << fmt::format("kernel_dir: {}", cache_dir);
     LOG(INFO) << fmt::format("kernel_name: {}", this->function_name_);
     auto result = this->overloads_.insert({signature, kernel});
     if (result.second) {
