@@ -1,5 +1,4 @@
 import importlib.util
-import os
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import List, Tuple, Union
@@ -8,8 +7,7 @@ import torch
 import triton
 from packaging.version import Version
 
-# use a separate cache for flaggems triton kernels
-os.environ["TRITON_CACHE_DIR"] = str(Path.home() / ".flaggems" / "triton_cache")
+# do not specifier a cache dir for libtriton jit now
 # pylint: disable-next=wrong-import-position
 triton_version = Version(triton.__version__)
 
@@ -232,14 +230,12 @@ def _compile_a_kernel(
         ccinfo: triton.compiler.CompiledKernel = triton.compile(
             src, target, options=opts
         )
-    # triton 3.2, hash is nologer the subdir name in cachedir, instead the hash of the kernel hash is
-    if triton_version >= Version("3.2.0"):
-        from triton.runtime.cache import get_cache_manager
 
-        cache_manager = get_cache_manager(ccinfo.hash)
-        return cache_manager.key
+    # kernel's hash may not equals the dir in cache
+    from triton.runtime.cache import get_cache_manager
 
-    return ccinfo.hash
+    cache_manager = get_cache_manager(ccinfo.hash)
+    return cache_manager.cache_dir
 
 
 def compile_a_kernel(
