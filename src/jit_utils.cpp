@@ -62,14 +62,4 @@ std::filesystem::path get_home_directory() {
   }();
   return home_dir;
 }
-
-std::filesystem::path get_cache_path() {
-  const static std::filesystem::path cache_dir = []() {
-    const char* cache_env = std::getenv("FLAGGEMS_TRITON_CACHE_DIR");
-    std::filesystem::path cache_dir =
-        cache_env ? std::filesystem::path(cache_env) : (get_home_directory() / ".flaggems" / "triton_cache");
-    return cache_dir;
-  }();
-  return cache_dir;
-}
 }  // namespace triton_jit
