@@ -28,6 +28,12 @@ constexpr const char *to_triton_typename(c10::ScalarType t) {
       return "i64";
     case c10::ScalarType::Short:
       return "i16";
+    case c10::ScalarType::UInt32:
+      return "u32";
+    case c10::ScalarType::UInt64:
+      return "u64";
+    case c10::ScalarType::UInt16;
+      return "u16";
     case c10::ScalarType::Char:
       return "i8";
     case c10::ScalarType::Byte:

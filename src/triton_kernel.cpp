@@ -86,7 +86,6 @@ void TritonKernel::launch(unsigned int grid_x,
                           int num_warps,
                           CUstream stream,
                           void** args) const {
-  // get the context associated with the stream
   this->lazy_init_handle();
 
   LOG(INFO) << "cuLaunchKernel";
