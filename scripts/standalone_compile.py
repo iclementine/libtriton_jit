@@ -197,7 +197,7 @@ def _compile_a_kernel(
             signature=signature_without_spec,
             attrs=attrs,
         )
-    elif triton_version == Version("3.3.0"):
+    elif triton_version >= Version("3.3.0"):
         arg_names = fn.arg_names
         _constants = {(i,): v for i, v in constants.items()}
         _signature_without_spec = {}
