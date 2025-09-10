@@ -32,7 +32,7 @@ constexpr const char *to_triton_typename(c10::ScalarType t) {
       return "u32";
     case c10::ScalarType::UInt64:
       return "u64";
-    case c10::ScalarType::UInt16;
+    case c10::ScalarType::UInt16:
       return "u16";
     case c10::ScalarType::Char:
       return "i8";
