@@ -79,6 +79,7 @@ class TritonJITFunction {
                   unsigned int num_warps,
                   unsigned int num_stages,
                   Args... args) const;
+
   void launch_with_raw_args(CUstream stream,
                             unsigned int grid_x,
                             unsigned int grid_y,
@@ -259,13 +260,10 @@ void TritonJITFunction::operator()(CUstream stream,
   LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
 
   // TODO: use torch backend-agnostic device APIs
-  CUcontext ctx;
-  checkCudaErrors(cuStreamGetCtx(stream, &ctx));
-  checkCudaErrors(cuCtxSetCurrent(ctx));  // redundant?
-  CUdevice d;
-  // device management is done with torch, assume one CUcontext per device                         // int
-  checkCudaErrors(cuCtxGetDevice(&d));
-  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  ensure_cuda_context();
+  CUdevice device_index;
+  checkCudaErrors(cuCtxGetDevice(&device_index));
+  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, device_index);
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;
 }
