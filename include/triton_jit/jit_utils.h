@@ -7,6 +7,7 @@
 #include <string>
 
 #include "c10/util/Logging.h"  // use torch's logging
+#include "cuda.h"
 #include "torch/torch.h"
 
 namespace triton_jit {
@@ -104,4 +105,23 @@ struct triton_type : triton_type_helper<std::remove_cv_t<std::remove_reference_t
 std::filesystem::path get_script_dir();
 const char *get_gen_static_sig_script();
 const char *get_standalone_compile_script();
+void ensure_cuda_context();
+
+#define checkCudaErrors(err) __checkCudaErrors(err, __FILE__, __LINE__)
+
+// Error handling function using exceptions instead of exit()
+inline void __checkCudaErrors(CUresult code, const char *file, const int line) {
+  if (code != CUDA_SUCCESS) {
+    const char *error_string;
+    cuGetErrorString(code, &error_string);
+    fprintf(stderr,
+            "CUDA Driver API error = %04d from file <%s>, line %i. Detail: <%s>\n",
+            code,
+            file,
+            line,
+            error_string);
+    throw std::runtime_error(error_string);
+  }
+}
+
 }  // namespace triton_jit

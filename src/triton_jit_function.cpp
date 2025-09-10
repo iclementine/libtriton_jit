@@ -56,6 +56,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_stages,
                                                   CUdevice device_index) const {
   std::string signature(_signature);
+  std::string key = fmt::format("{};{}", signature, device_index);
   // std::cout << "Standalone script to debug: \n"
   //           << fmt::format(
   //                  "python standalone_compile.py {} -n {} --device-id {} --num-warps {} --num-stages {} "
@@ -67,7 +68,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
   //                  num_stages,
   //                  signature)
   //           << std::endl;
-  auto pos = this->overloads_.find(signature);
+  auto pos = this->overloads_.find(key);
   if (pos == this->overloads_.end()) {
     // embed python
     namespace py = pybind11;
@@ -91,7 +92,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
     TritonKernel kernel(cache_dir, this->function_name_);
     LOG(INFO) << fmt::format("kernel_dir: {}", cache_dir);
     LOG(INFO) << fmt::format("kernel_name: {}", this->function_name_);
-    auto result = this->overloads_.insert({signature, kernel});
+    auto result = this->overloads_.insert({key, kernel});
     if (result.second) {
       pos = result.first;
     } else {
