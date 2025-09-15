@@ -5,9 +5,6 @@
 #include <string>
 #include <vector>
 
-#include <unistd.h>  // for getpid() on POSIX
-#include <thread>
-
 #include <type_traits>
 #include <utility>
 #include "c10/util/Logging.h"  // use torch's logging
@@ -60,6 +57,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_stages,
                                                   CUdevice device_index) const {
   std::string signature(_signature);
+  std::string key = fmt::format("{};{}", signature, device_index);
   auto pos = this->overloads_.find(key);
   if (pos == this->overloads_.end()) {
     // embed python
@@ -90,7 +88,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
   return pos->second;
 }
 
-TritonJITFunction& TritonJITFunction::getInstance(std::string_view path, std::string_view name) {
+TritonJITFunction& TritonJITFunction::get_instance(std::string_view path, std::string_view name) {
   std::string function_id = fmt::format("{}:{}", path, name);
   auto pos = TritonJITFunction::functions_.find(function_id);
 

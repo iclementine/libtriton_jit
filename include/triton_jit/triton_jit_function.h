@@ -68,7 +68,7 @@ class TritonJITFunction {
   static std::unordered_map<std::string, TritonJITFunction> functions_;
 
  public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+  static TritonJITFunction &get_instance(std::string_view path, std::string_view name);
   TritonJITFunction(const TritonJITFunction &) = delete;
   TritonJITFunction &operator=(const TritonJITFunction &) = delete;
   TritonJITFunction(TritonJITFunction &&) = default;
