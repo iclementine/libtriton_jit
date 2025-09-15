@@ -1,8 +1,12 @@
 #include "triton_jit/triton_jit_function.h"
 
 #include <algorithm>
+#include <cassert>
 #include <string>
 #include <vector>
+
+#include <unistd.h>  // for getpid() on POSIX
+#include <thread>
 
 #include <type_traits>
 #include <utility>
@@ -56,18 +60,6 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_stages,
                                                   CUdevice device_index) const {
   std::string signature(_signature);
-  std::string key = fmt::format("{};{}", signature, device_index);
-  // std::cout << "Standalone script to debug: \n"
-  //           << fmt::format(
-  //                  "python standalone_compile.py {} -n {} --device-id {} --num-warps {} --num-stages {} "
-  //                  "--signature {}",
-  //                  this->file_path_,
-  //                  this->function_name_,
-  //                  device_index,
-  //                  num_warps,
-  //                  num_stages,
-  //                  signature)
-  //           << std::endl;
   auto pos = this->overloads_.find(key);
   if (pos == this->overloads_.end()) {
     // embed python
@@ -87,12 +79,8 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
       std::cerr << "Python exception: " << e.what() << std::endl;
     }
     std::string cache_dir = ans.cast<std::string>();
-    LOG(INFO) << "Output: " << cache_dir;
-
-    TritonKernel kernel(cache_dir, this->function_name_);
-    LOG(INFO) << fmt::format("kernel_dir: {}", cache_dir);
-    LOG(INFO) << fmt::format("kernel_name: {}", this->function_name_);
-    auto result = this->overloads_.insert({key, kernel});
+    TritonKernel k(cache_dir, this->function_name_);
+    auto result = this->overloads_.emplace(std::move(key), std::move(k));
     if (result.second) {
       pos = result.first;
     } else {
@@ -108,7 +96,7 @@ TritonJITFunction& TritonJITFunction::getInstance(std::string_view path, std::st
 
   if (pos == TritonJITFunction::functions_.end()) {
     TritonJITFunction f(path, name);
-    auto result = TritonJITFunction::functions_.insert({function_id, f});
+    auto result = TritonJITFunction::functions_.emplace(std::move(function_id), std::move(f));
     if (result.second) {
       pos = result.first;
     } else {
@@ -131,7 +119,7 @@ void TritonJITFunction::launch_with_raw_args(CUstream stream,
   checkCudaErrors(cuCtxSetCurrent(ctx));
   CUdevice d;
   checkCudaErrors(cuCtxGetDevice(&d));
-  LOG(INFO) << fmt::format("launching kernel");
+  // LOG(INFO) << fmt::format("launching kernel");
   const TritonKernel& kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
 }

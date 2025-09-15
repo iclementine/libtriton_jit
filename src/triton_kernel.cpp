@@ -16,11 +16,11 @@ TritonKernel::TritonKernel(std::string_view dir, std::string_view kernel_name)
   std::string metadata_path = fmt::format("{}/{}.json", this->dir_, this->kernel_name_);
   std::ifstream f(metadata_path.c_str());
   json meta_data = json::parse(f);
+
   // shared and arch are bound to a kernel dir
   this->shared_ = meta_data["shared"];
-
   this->arch_ = meta_data["target"]["arch"];
-  LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_);
+  // LOG(INFO) << fmt::format("TritonKernel Metadata loaded arch: {} shared: {}", this->arch_, this->shared_);
 }
 
 void TritonKernel::lazy_init_handle() const {
@@ -28,6 +28,9 @@ void TritonKernel::lazy_init_handle() const {
     return;
   }
 
+  LOG(INFO) << fmt::format("TritonKernel {} at {} loading itself!",
+                           this->kernel_name_,
+                           reinterpret_cast<const void*>(this));
   // check cuda arch
   CUdevice device_index;
   checkCudaErrors(cuCtxGetDevice(&device_index));
