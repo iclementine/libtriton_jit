@@ -13,7 +13,7 @@
 #include "pybind11/embed.h"
 
 namespace triton_jit {
-std::unordered_map<std::string, TritonJITFunction> TritonJITFunction::functions_;
+std::unordered_map<std::string, std::shared_ptr<TritonJITFunction>> TritonJITFunction::functions_;
 
 void ensure_initialized() {
   // When using libtriton_jit with a python C-extension, it is already initialized
@@ -51,7 +51,7 @@ TritonJITFunction::TritonJITFunction(std::string_view path, std::string_view nam
   this->static_sig_ = StaticSignature {num_args, arg_types};
 }
 
-const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
+std::shared_ptr<TritonKernel> TritonJITFunction::get_kernel(std::string_view _signature,
                                                   int num_warps,
                                                   int num_stages,
                                                   CUdevice device_index) const {
@@ -69,6 +69,7 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
   //                  signature)
   //           << std::endl;
   auto pos = this->overloads_.find(key);
+
   if (pos == this->overloads_.end()) {
     // embed python
     namespace py = pybind11;
@@ -92,7 +93,8 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
     TritonKernel kernel(cache_dir, this->function_name_);
     LOG(INFO) << fmt::format("kernel_dir: {}", cache_dir);
     LOG(INFO) << fmt::format("kernel_name: {}", this->function_name_);
-    auto result = this->overloads_.insert({key, kernel});
+    auto kernel_ptr = std::make_shared<TritonKernel>(cache_dir, this->function_name_);
+    auto result = this->overloads_.insert({key, kernel_ptr});
     if (result.second) {
       pos = result.first;
     } else {
@@ -102,20 +104,19 @@ const TritonKernel& TritonJITFunction::get_kernel(std::string_view _signature,
   return pos->second;
 }
 
-TritonJITFunction& TritonJITFunction::getInstance(std::string_view path, std::string_view name) {
-  std::string function_id = fmt::format("{}:{}", path, name);
-  auto pos = TritonJITFunction::functions_.find(function_id);
-
-  if (pos == TritonJITFunction::functions_.end()) {
-    TritonJITFunction f(path, name);
-    auto result = TritonJITFunction::functions_.insert({function_id, f});
-    if (result.second) {
-      pos = result.first;
-    } else {
-      throw std::runtime_error("Unable to emplace the TritonJITFunction into Multiton cache.");
-    }
+std::shared_ptr<TritonJITFunction> TritonJITFunction::getInstance(
+  const std::string& path,
+  const std::string& name) {
+  //std::lock_guard<std::mutex> lock(mutex_);
+  auto key = path + ":" + name;
+  auto it = functions_.find(key);
+  if (it != functions_.end()) {
+    return it->second;
   }
-  return pos->second;
+
+  auto instance = std::shared_ptr<TritonJITFunction>(new TritonJITFunction(path, name));
+  functions_[key] = instance;
+  return instance;
 }
 
 void TritonJITFunction::launch_with_raw_args(CUstream stream,
@@ -132,7 +133,7 @@ void TritonJITFunction::launch_with_raw_args(CUstream stream,
   CUdevice d;
   checkCudaErrors(cuCtxGetDevice(&d));
   LOG(INFO) << fmt::format("launching kernel");
-  const TritonKernel& kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
-  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, args);
+  auto kernel = this->get_kernel(full_signature, num_warps, num_stages, d);
+  kernel->launch(grid_x, grid_y, grid_z, num_warps, stream, args);
 }
 }  // namespace triton_jit
