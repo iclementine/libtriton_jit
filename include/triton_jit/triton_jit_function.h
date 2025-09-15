@@ -63,13 +63,16 @@ class TritonJITFunction {
   std::string file_path_;
   std::string function_name_;
   StaticSignature static_sig_;
-  // TODO: use shared_mutex to make it thread-safe and optimize to concurrent read
   mutable std::unordered_map<std::string, TritonKernel> overloads_;
 
   static std::unordered_map<std::string, TritonJITFunction> functions_;
 
  public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+  static TritonJITFunction &get_instance(std::string_view path, std::string_view name);
+  TritonJITFunction(const TritonJITFunction &) = delete;
+  TritonJITFunction &operator=(const TritonJITFunction &) = delete;
+  TritonJITFunction(TritonJITFunction &&) = default;
+  TritonJITFunction &operator=(TritonJITFunction &&) = default;
 
   template <typename... Args>
   void operator()(CUstream stream,
@@ -90,12 +93,11 @@ class TritonJITFunction {
                             void **args) const;
 
  private:
+  TritonJITFunction(std::string_view path, std::string_view name);
   const TritonKernel &get_kernel(std::string_view signature,
                                  int num_warps,
                                  int num_stages,
                                  CUdevice device_index) const;
-
-  TritonJITFunction(std::string_view path, std::string_view name);
 };
 
 struct ArgHandle {
@@ -256,8 +258,8 @@ void TritonJITFunction::operator()(CUstream stream,
       full_signature += signature[i];
     }
   }
-  LOG(INFO) << fmt::format("full signature is {}", full_signature);
-  LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
+  // LOG(INFO) << fmt::format("full signature is {}", full_signature);
+  // LOG(INFO) << "raw_args_list.size(): " << kernel_args.size() << std::endl;
 
   // TODO: use torch backend-agnostic device APIs
   ensure_cuda_context();
@@ -267,5 +269,5 @@ void TritonJITFunction::operator()(CUstream stream,
   kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;
 }
-
+static_assert(std::is_move_constructible_v<TritonJITFunction>);
 }  // namespace triton_jit

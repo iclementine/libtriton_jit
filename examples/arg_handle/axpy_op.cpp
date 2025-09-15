@@ -18,7 +18,7 @@ at::Tensor axpy(const at::Tensor &x, const at::Tensor &y, const c10::Scalar &alp
   at::ScalarType out_dtype = at::promote_types(x.scalar_type(), y.scalar_type());
   at::Tensor out = at::empty(xx.sizes(), at::TensorOptions().dtype(out_dtype).device(x.device()));
 
-  const TritonJITFunction &f = TritonJITFunction::getInstance(std::string("axpy.py"), "axpy_kernel");
+  const TritonJITFunction &f = TritonJITFunction::get_instance(std::string("axpy.py"), "axpy_kernel");
 
   // add utility to build this automatically
   int64_t tile_size = 1024;
@@ -46,7 +46,7 @@ at::Tensor axpy2(const at::Tensor &x, const at::Tensor &y, const std::optional<c
   at::ScalarType out_dtype = at::promote_types(x.scalar_type(), y.scalar_type());
   at::Tensor out = at::empty(xx.sizes(), at::TensorOptions().dtype(out_dtype).device(x.device()));
 
-  const TritonJITFunction &f = TritonJITFunction::getInstance(std::string("axpy.py"), "axpy2_kernel");
+  const TritonJITFunction &f = TritonJITFunction::get_instance(std::string("axpy.py"), "axpy2_kernel");
 
   // add utility to build this automatically
   int64_t tile_size = 1024;
@@ -81,7 +81,7 @@ at::Tensor axpy3(const at::Tensor &x,
       return at::empty(xx.sizes(), at::TensorOptions().dtype(out_dtype).device(x.device()));
     }
   }();
-  const TritonJITFunction &f = TritonJITFunction::getInstance(std::string("axpy.py"), "axpy3_kernel");
+  const TritonJITFunction &f = TritonJITFunction::get_instance(std::string("axpy.py"), "axpy3_kernel");
 
   // add utility to build this automatically
   int64_t tile_size = 1024;

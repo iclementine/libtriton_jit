@@ -58,7 +58,7 @@ at::Tensor sum_dim(const at::Tensor &self,
 
   // def sum_kernel(in_ptr, out_ptr, M, N, BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, STAGE: tl.constexpr):
   using namespace triton_jit;
-  const TritonJITFunction &f = TritonJITFunction::getInstance("./sum.py", "sum_kernel");
+  const TritonJITFunction &f = TritonJITFunction::get_instance("./sum.py", "sum_kernel");
   int64_t tile_m = 4;
   int64_t tile_n = 512;
   const int num_warps = 8;
