@@ -64,12 +64,16 @@ class TritonJITFunction {
   std::string function_name_;
   StaticSignature static_sig_;
   // TODO: use shared_mutex to make it thread-safe and optimize to concurrent read
-  mutable std::unordered_map<std::string, TritonKernel> overloads_;
-
-  static std::unordered_map<std::string, TritonJITFunction> functions_;
+  mutable std::unordered_map<std::string, std::shared_ptr<TritonKernel>> overloads_;
+  static std::unordered_map<std::string, std::shared_ptr<TritonJITFunction>> functions_;
 
  public:
-  static TritonJITFunction &getInstance(std::string_view path, std::string_view name);
+  static std::shared_ptr<TritonJITFunction> getInstance(
+      const std::string& path,
+      const std::string& name);
+
+  TritonJITFunction(const TritonJITFunction&) = delete;
+  TritonJITFunction& operator=(const TritonJITFunction&) = delete;
 
   template <typename... Args>
   void operator()(CUstream stream,
@@ -90,7 +94,7 @@ class TritonJITFunction {
                             void **args) const;
 
  private:
-  const TritonKernel &get_kernel(std::string_view signature,
+  std::shared_ptr<TritonKernel> get_kernel(std::string_view signature,
                                  int num_warps,
                                  int num_stages,
                                  CUdevice device_index) const;
@@ -263,8 +267,8 @@ void TritonJITFunction::operator()(CUstream stream,
   ensure_cuda_context();
   CUdevice device_index;
   checkCudaErrors(cuCtxGetDevice(&device_index));
-  const TritonKernel &kernel = this->get_kernel(full_signature, num_warps, num_stages, device_index);
-  kernel.launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
+  auto kernel = this->get_kernel(full_signature, num_warps, num_stages, device_index);
+  kernel->launch(grid_x, grid_y, grid_z, num_warps, stream, kernel_args.data());
   return;
 }
 
