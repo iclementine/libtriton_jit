@@ -143,8 +143,8 @@ def _compile_a_kernel(
     hints = {k: v for k, v in hints.items() if v is not None}
     for h in hints.values():
         assert h in [1, 16], f"Only 1 and 16 are valid hints, got {h}"
-    divisible_by_16 = [i for i, h in hints.items() if h == 16]
-    equal_to_1 = [i for i, h in hints.items() if h == 1]
+    divisible_by_16 = tuple(i for i, h in hints.items() if h == 16)
+    equal_to_1 = tuple(i for i, h in hints.items() if h == 1)
 
     if triton_version.major == 3 and triton_version.minor == 1:
         attrs = triton.compiler.AttrsDescriptor(

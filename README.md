@@ -60,7 +60,7 @@ This is the main facilities for calling jit functions from C++, which can be use
 
 ## Usage
 
-The basic usage of this library is via `TritonJITFunction`. First, get a `TritonJITFunction` via `TritonJITFunction::getInstance(source_path, function_name)`. Then call it.
+The basic usage of this library is via `TritonJITFunction`. First, get a `TritonJITFunction` via `TritonJITFunction::get_instance(source_path, function_name)`. Then call it.
 
 The `operator()` of `TritonJITFunction` is a variadic template. The arguments consist of 2 parts.
 
@@ -81,7 +81,7 @@ at::Tensor add_tensor(const at::Tensor &a_, const at::Tensor &b_) {
   at::Tensor out = at::empty(a.sizes(), at::TensorOptions().dtype(out_dtype).device(a.device()));
 
   const triton_jit::TritonJITFunction &f =
-      triton_jit::TritonJITFunction::getInstance("add.py", "binary_pointwise_kernel");
+      triton_jit::TritonJITFunction::get_instance("add.py", "binary_pointwise_kernel");
 
   // add utility to build this automatically
   int64_t tile_size = 1024;
