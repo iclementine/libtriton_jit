@@ -162,7 +162,7 @@ TritonJIT provides cmake packages, so it can be used with cmake. It can be used 
 1. use the installed package, via `find_package`.
 2. add the project as a sub-project, via `FetchContent`, `ExternProjectAdd` or `add_subdirectory`.
 
-### Debug
+### Logging
 
 We currently use torch's logging facilities, thus environment variable `TORCH_CPP_LOG_LEVEL=INFO` enables logging.
 
