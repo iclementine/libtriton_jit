@@ -63,8 +63,10 @@ class TritonJITFunction {
   std::string file_path_;
   std::string function_name_;
   StaticSignature static_sig_;
+  // the cached compiled TritonKernel of this TritonJITFunction
   mutable std::unordered_map<std::string, TritonKernel> overloads_;
 
+  // a registry to hold all TritonJITFunctions
   static std::unordered_map<std::string, TritonJITFunction> functions_;
 
  public:
@@ -83,6 +85,12 @@ class TritonJITFunction {
                   unsigned int num_stages,
                   Args... args) const;
 
+  /**
+   * A Low level API to launch Triton Kernel directly with pointers to all kernel args. This is
+   * a thin wrapper around cuLaunchKernel. It is experimental and subject to change. It is
+   * designed to be used manual argument processing. An argument-buffer-like design is working in
+   * progress now to support more flexible argument processing.
+   */
   void launch_with_raw_args(CUstream stream,
                             unsigned int grid_x,
                             unsigned int grid_y,
@@ -94,6 +102,11 @@ class TritonJITFunction {
 
  private:
   TritonJITFunction(std::string_view path, std::string_view name);
+
+  /**
+   * Get or Add a TritonKernel corresponding to the signature, compile options and device index.
+   * It may trigger triton.compile via the embedded python interpreter.
+   */
   const TritonKernel &get_kernel(std::string_view signature,
                                  int num_warps,
                                  int num_stages,
@@ -102,11 +115,19 @@ class TritonJITFunction {
 
 struct ArgHandle {
   const StaticSignature &ssig;
+  /* data pointer of Tensors;
+  It is not that straigt extract data pointer from a tensor, since it is encapsulated
+  by Storage. We gather data pointers here for them to live out of the loop while iterating
+  over arguments.*/
   c10::SmallVector<void *> &data_pointers;
   c10::SmallVector<void *> &kernel_args;
   c10::SmallVector<std::string> &signature;
   int idx;
 
+  /***
+   * Iterate over the args and populate data_pointers, kernel_args and signature according to
+   * to rules of Triton's jit runtime.
+   */
   template <typename... Args>
   void handle_args(Args... args) {
     (handle_arg(args), ...);
@@ -221,6 +242,18 @@ struct ArgHandle {
   }
 };
 
+/***
+ * The mainly used method of TritonJITFunction. It can be used with different triton functions
+ * with different arguments. The main work are signature extraction; kernel arg extraction and
+ * kernel launch.
+ *
+ * Arguments consist of 2 parts:
+ * fixed part: stream, grid, compile options;
+ * variadic part: arguments to the triton function.ArgHandle
+ *
+ * TODO:
+ * customization point: compile options for different backends may be different.
+ */
 template <typename... Args>
 void TritonJITFunction::operator()(CUstream stream,
                                    unsigned int grid_x,

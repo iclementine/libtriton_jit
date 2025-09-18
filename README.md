@@ -162,6 +162,22 @@ TritonJIT provides cmake packages, so it can be used with cmake. It can be used 
 1. use the installed package, via `find_package`.
 2. add the project as a sub-project, via `FetchContent`, `ExternProjectAdd` or `add_subdirectory`.
 
-### Debug
+### Logging
 
 We currently use torch's logging facilities, thus environment variable `TORCH_CPP_LOG_LEVEL=INFO` enables logging.
+
+
+## RoadMap
+
+- Support more backends
+  - handle compile options for different backends
+  - handle argument processing rules for different backends, if they have different rules to route the arguments;
+  - support driver APIs for different backends(for TritonKernels's launch and lazy_init_handle method);
+- Better argument processing
+  - copy arguments to a buffer to ensure their lifetime;
+  - add low level API for users to process arguments one by one manually;
+- Expose Lower level APIs to be independent from libtorch
+  - Use typed pointers as parameters instead of Tensors;
+  - Considerations: delegate tensor allocation and metadata computation to other tensor libraries;
+- support auto tunning:
+  - Implement caching auto tuner
