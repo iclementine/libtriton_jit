@@ -177,7 +177,7 @@ We currently use torch's logging facilities, thus environment variable `TORCH_CP
   - copy arguments to a buffer to ensure their lifetime;
   - add low level API for users to process arguments one by one manually;
 - Expose Lower level APIs to be independent from libtorch
-  - Use typed pointer instead of Tensor;
-  - Considerations: delegate tensor allocation; metadata computation to other tensor libraries
+  - Use typed pointers as parameters instead of Tensors;
+  - Considerations: delegate tensor allocation and metadata computation to other tensor libraries;
 - support auto tunning:
   - Implement caching auto tuner
